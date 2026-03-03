@@ -1,0 +1,17 @@
+{
+    "name": "InventoryValuation",
+    "slug": "inventory-valuation",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Inventory Valuation module for LFS",
+    "permissions": [
+        "inventory-valuation.view"
+    ],
+    "nav": {
+        "label": "Inventory Valuation",
+        "route": "inventory-valuation.index",
+        "icon": "fas fa-warehouse",
+        "order": 80
+    }
+}
+

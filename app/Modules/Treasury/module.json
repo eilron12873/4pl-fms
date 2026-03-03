@@ -1,0 +1,17 @@
+{
+    "name": "Treasury",
+    "slug": "treasury",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Treasury module for LFS",
+    "permissions": [
+        "treasury.view"
+    ],
+    "nav": {
+        "label": "Treasury",
+        "route": "treasury.index",
+        "icon": "fas fa-piggy-bank",
+        "order": 100
+    }
+}
+

@@ -1,0 +1,17 @@
+{
+    "name": "LFSAdministration",
+    "slug": "lfs-administration",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "LFS Administration module for configuration and finance-focused administration",
+    "permissions": [
+        "lfs-administration.view"
+    ],
+    "nav": {
+        "label": "LFS Administration",
+        "route": "lfs-administration.index",
+        "icon": "fas fa-cogs",
+        "order": 110
+    }
+}
+

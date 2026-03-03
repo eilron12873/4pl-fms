@@ -1,0 +1,17 @@
+{
+    "name": "AccountsReceivable",
+    "slug": "accounts-receivable",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Accounts Receivable module for LFS",
+    "permissions": [
+        "accounts-receivable.view"
+    ],
+    "nav": {
+        "label": "Accounts Receivable",
+        "route": "accounts-receivable.index",
+        "icon": "fas fa-file-invoice-dollar",
+        "order": 40
+    }
+}
+

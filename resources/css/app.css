@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+    font-family: sans-serif;
+}
+
+.dropdown-menu {
+    @apply bg-gray-900 text-white rounded shadow-lg;
+}
+.dropdown-item {
+    @apply text-white hover:bg-gray-600 no-underline !important;
+}
+.dropdown-item.active {
+    @apply bg-blue-600 text-white !important;
+}
+nav ul li a {
+    color: #ffffff !important;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #9ca3af;
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background-color: #f3f4f6;
+}

@@ -1,0 +1,17 @@
+{
+    "name": "FinancialReporting",
+    "slug": "financial-reporting",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Financial Reporting module for LFS",
+    "permissions": [
+        "financial-reporting.view"
+    ],
+    "nav": {
+        "label": "Financial Reporting",
+        "route": "financial-reporting.index",
+        "icon": "fas fa-chart-pie",
+        "order": 120
+    }
+}
+

@@ -1,0 +1,17 @@
+{
+    "name": "FixedAssets",
+    "slug": "fixed-assets",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Fixed Assets module for LFS",
+    "permissions": [
+        "fixed-assets.view"
+    ],
+    "nav": {
+        "label": "Fixed Assets",
+        "route": "fixed-assets.index",
+        "icon": "fas fa-truck-moving",
+        "order": 90
+    }
+}
+

@@ -1,0 +1,17 @@
+{
+    "name": "BillingEngine",
+    "slug": "billing-engine",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Billing Engine module for LFS",
+    "permissions": [
+        "billing-engine.view"
+    ],
+    "nav": {
+        "label": "Billing Engine",
+        "route": "billing-engine.index",
+        "icon": "fas fa-cash-register",
+        "order": 60
+    }
+}
+

@@ -1,0 +1,17 @@
+{
+    "name": "CostingEngine",
+    "slug": "costing-engine",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Costing Engine module for LFS",
+    "permissions": [
+        "costing-engine.view"
+    ],
+    "nav": {
+        "label": "Costing Engine",
+        "route": "costing-engine.index",
+        "icon": "fas fa-balance-scale-right",
+        "order": 70
+    }
+}
+

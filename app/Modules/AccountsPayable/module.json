@@ -1,0 +1,17 @@
+{
+    "name": "AccountsPayable",
+    "slug": "accounts-payable",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Accounts Payable module for LFS",
+    "permissions": [
+        "accounts-payable.view"
+    ],
+    "nav": {
+        "label": "Accounts Payable",
+        "route": "accounts-payable.index",
+        "icon": "fas fa-file-invoice",
+        "order": 50
+    }
+}
+

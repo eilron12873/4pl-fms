@@ -1,0 +1,17 @@
+{
+    "name": "GeneralLedger",
+    "slug": "general-ledger",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "General Ledger module for LFS",
+    "permissions": [
+        "general-ledger.view"
+    ],
+    "nav": {
+        "label": "General Ledger",
+        "route": "general-ledger.index",
+        "icon": "fas fa-book",
+        "order": 30
+    }
+}
+

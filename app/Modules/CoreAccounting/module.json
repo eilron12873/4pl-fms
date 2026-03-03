@@ -1,0 +1,17 @@
+{
+    "name": "CoreAccounting",
+    "slug": "core-accounting",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Core accounting engine module for LFS",
+    "permissions": [
+        "core-accounting.view"
+    ],
+    "nav": {
+        "label": "Core Accounting",
+        "route": "core-accounting.index",
+        "icon": "fas fa-balance-scale",
+        "order": 20
+    }
+}
+
