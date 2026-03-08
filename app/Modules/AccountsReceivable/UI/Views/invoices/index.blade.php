@@ -2,6 +2,9 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ __('Invoices') }}</h2>
+            @can('accounts-receivable.manage')
+            <a href="{{ route('accounts-receivable.invoices.create') }}" class="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">{{ __('Create invoice') }}</a>
+            @endcan
         </div>
     </x-slot>
     <div class="py-4 max-w-7xl mx-auto sm:px-6 lg:px-8">

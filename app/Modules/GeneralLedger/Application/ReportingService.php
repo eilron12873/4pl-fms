@@ -213,6 +213,55 @@ class ReportingService
     }
 
     /**
+     * P&L per Revenue: revenue broken down by segment (config revenue_breakdown) plus cost/expense sections.
+     *
+     * @return array{revenue_segments: array, expense_sections: array, total_revenue: float, total_expense: float, net_income: float, from_date: string, to_date: string}
+     */
+    public function plPerRevenue(string $fromDate, string $toDate): array
+    {
+        $revenueBreakdown = config('gl_statements.revenue_breakdown', []);
+        $revenueSegments = [];
+        $totalRevenue = 0;
+        foreach ($revenueBreakdown as $segment) {
+            $amount = $this->sumByAccountPrefixes($segment['account_prefixes'], $fromDate, $toDate);
+            $revenueSegments[] = [
+                'key' => $segment['key'],
+                'label' => $segment['label'],
+                'amount' => $amount,
+            ];
+            $totalRevenue += $amount;
+        }
+
+        $expenseKeys = ['cost_of_revenue', 'operating_expenses', 'other_income', 'other_expense'];
+        $incomeStatement = config('gl_statements.income_statement', []);
+        $expenseSections = [];
+        $totalExpense = 0;
+        foreach ($incomeStatement as $section) {
+            if (in_array($section['key'], $expenseKeys, true)) {
+                $amount = $this->sumByAccountPrefixes($section['account_prefixes'], $fromDate, $toDate);
+                $isIncome = $section['key'] === 'other_income';
+                $value = $isIncome ? $amount : -abs($amount);
+                $expenseSections[] = [
+                    'key' => $section['key'],
+                    'label' => $section['label'],
+                    'amount' => $value,
+                ];
+                $totalExpense += $isIncome ? -$amount : abs($amount);
+            }
+        }
+
+        return [
+            'revenue_segments' => $revenueSegments,
+            'expense_sections' => $expenseSections,
+            'total_revenue' => $totalRevenue,
+            'total_expense' => $totalExpense,
+            'net_income' => $totalRevenue - $totalExpense,
+            'from_date' => $fromDate,
+            'to_date' => $toDate,
+        ];
+    }
+
+    /**
      * Balance sheet as of a given date.
      *
      * @return array{sections: array, total_assets: float, total_liabilities: float, total_equity: float, as_of_date: string}

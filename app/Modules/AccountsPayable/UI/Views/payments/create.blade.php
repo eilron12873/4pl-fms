@@ -34,6 +34,22 @@
                         <input type="text" id="currency" name="currency" value="{{ old('currency', 'USD') }}" maxlength="3" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                     </div>
                     <div>
+                        <label for="payment_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Payment method') }}</label>
+                        <select id="payment_method" name="payment_method" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <option value="ach" {{ old('payment_method', 'ach') === 'ach' ? 'selected' : '' }}>{{ __('ACH / Other') }}</option>
+                            <option value="check" {{ old('payment_method') === 'check' ? 'selected' : '' }}>{{ __('Check') }}</option>
+                        </select>
+                    </div>
+                    <div id="bank_account_wrap" style="{{ old('payment_method', 'ach') === 'check' ? '' : 'display:none' }}">
+                        <label for="bank_account_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Bank account') }}</label>
+                        <select id="bank_account_id" name="bank_account_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <option value="">{{ __('Select bank') }}</option>
+                            @foreach($bankAccounts ?? [] as $ba)
+                                <option value="{{ $ba->id }}" {{ old('bank_account_id') == $ba->id ? 'selected' : '' }}>{{ $ba->name }} ({{ $ba->account_number }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
                         <label for="reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Reference') }}</label>
                         <input type="text" id="reference" name="reference" value="{{ old('reference') }}" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                     </div>
@@ -50,4 +66,9 @@
             </form>
         </div>
     </div>
+    <script>
+    document.getElementById('payment_method').addEventListener('change', function() {
+        document.getElementById('bank_account_wrap').style.display = this.value === 'check' ? 'block' : 'none';
+    });
+    </script>
 </x-app-layout>

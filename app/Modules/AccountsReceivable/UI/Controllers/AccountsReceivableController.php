@@ -39,6 +39,70 @@ class AccountsReceivableController extends Controller
         return view('accounts-receivable::invoices.index', compact('invoices', 'clients'));
     }
 
+    public function invoiceCreate(): View
+    {
+        $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+        return view('accounts-receivable::invoices.create', compact('clients'));
+    }
+
+    public function invoiceStore(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'client_id' => ['required', 'exists:billing_clients,id'],
+            'invoice_date' => ['required', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:invoice_date'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'lines' => ['required', 'array'],
+            'lines.*.description' => ['nullable', 'string', 'max:500'],
+            'lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+        $data['lines'] = array_values(array_filter($data['lines'], function ($l) {
+            return isset($l['description']) && trim((string) $l['description']) !== '' && isset($l['amount']) && (float) $l['amount'] > 0;
+        }));
+        if (empty($data['lines'])) {
+            return redirect()->back()->withInput($request->input())->withErrors(['lines' => __('At least one line with description and amount is required.')]);
+        }
+        $invoice = $this->invoiceService->createManualInvoice($data);
+        return redirect()->route('accounts-receivable.invoices.show', $invoice->id)->with('success', __('Invoice created. You can issue it when ready.'));
+    }
+
+    public function invoiceEdit(int $id): View|RedirectResponse
+    {
+        $invoice = ArInvoice::with('lines')->findOrFail($id);
+        if ($invoice->isIssued()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Cannot edit an issued invoice.'));
+        }
+        $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+        return view('accounts-receivable::invoices.edit', compact('invoice', 'clients'));
+    }
+
+    public function invoiceUpdate(Request $request, int $id): RedirectResponse
+    {
+        $invoice = ArInvoice::findOrFail($id);
+        if ($invoice->isIssued()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Cannot edit an issued invoice.'));
+        }
+        $data = $request->validate([
+            'client_id' => ['required', 'exists:billing_clients,id'],
+            'invoice_date' => ['required', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:invoice_date'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'lines' => ['required', 'array'],
+            'lines.*.description' => ['nullable', 'string', 'max:500'],
+            'lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+        $data['lines'] = array_values(array_filter($data['lines'], function ($l) {
+            return isset($l['description']) && trim((string) $l['description']) !== '' && isset($l['amount']) && (float) $l['amount'] > 0;
+        }));
+        if (empty($data['lines'])) {
+            return redirect()->back()->withInput($request->input())->withErrors(['lines' => __('At least one line with description and amount is required.')]);
+        }
+        $this->invoiceService->updateDraftInvoice($invoice, $data);
+        return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice updated.'));
+    }
+
     public function invoiceShow(int $id): View
     {
         $invoice = ArInvoice::with(['client', 'lines.journal', 'adjustments'])->findOrFail($id);

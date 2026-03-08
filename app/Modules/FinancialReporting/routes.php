@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified', 'permission:financial-reporting.view'])
         Route::get('/tax-summary', [FinancialReportingController::class, 'taxSummary'])->name('tax-summary');
         Route::get('/comparative-income-statement', [FinancialReportingController::class, 'comparativeIncomeStatement'])->name('comparative-income-statement');
         Route::get('/management-pl-dimension', [FinancialReportingController::class, 'managementPlByDimension'])->name('management-pl-dimension');
+        Route::get('/pl-per-revenue', [FinancialReportingController::class, 'plPerRevenue'])->name('pl-per-revenue');
         Route::get('/cash-flow-analysis', [FinancialReportingController::class, 'cashFlowAnalysis'])->name('cash-flow-analysis');
         Route::get('/kpi-dashboard', [FinancialReportingController::class, 'kpiDashboard'])->name('kpi-dashboard');
     });

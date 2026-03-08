@@ -5,6 +5,7 @@ namespace App\Modules\AccountsPayable\Infrastructure\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ApPayment extends Model
 {
@@ -17,6 +18,8 @@ class ApPayment extends Model
         'currency',
         'reference',
         'notes',
+        'payment_method',
+        'bank_account_id',
         'journal_id',
     ];
 
@@ -32,5 +35,15 @@ class ApPayment extends Model
     public function billPayments(): HasMany
     {
         return $this->hasMany(ApBillPayment::class, 'payment_id');
+    }
+
+    public function voucher(): HasOne
+    {
+        return $this->hasOne(ApVoucher::class, 'payment_id');
+    }
+
+    public function check(): HasOne
+    {
+        return $this->hasOne(ApCheck::class, 'payment_id');
     }
 }

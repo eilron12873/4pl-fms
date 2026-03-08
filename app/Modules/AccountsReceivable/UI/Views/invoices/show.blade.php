@@ -17,10 +17,13 @@
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Balance due') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($invoice->balance_due, 2) }} {{ $invoice->currency }}</dd></div>
             </dl>
             @if(!$invoice->isIssued() && auth()->user()?->can('accounts-receivable.manage'))
-                <form method="POST" action="{{ route('accounts-receivable.invoices.issue', $invoice->id) }}" class="mt-4">
-                    @csrf
-                    <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue invoice') }}</button>
-                </form>
+                <div class="mt-4 flex gap-2">
+                    <a href="{{ route('accounts-receivable.invoices.edit', $invoice->id) }}" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Edit invoice') }}</a>
+                    <form method="POST" action="{{ route('accounts-receivable.invoices.issue', $invoice->id) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue invoice') }}</button>
+                    </form>
+                </div>
             @endif
         </div>
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">

@@ -10,6 +10,7 @@
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
             <dl class="grid grid-cols-2 gap-4 text-sm">
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Vendor') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $bill->vendor->code }} - {{ $bill->vendor->name }}</dd></div>
+                @if($bill->purchaseOrder)<div><dt class="text-gray-500 dark:text-gray-400">{{ __('P.O.') }}</dt><dd><a href="{{ route('procurement.purchase-orders.show', $bill->purchase_order_id) }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ $bill->purchaseOrder->po_number }}</a></dd></div>@endif
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Bill date') }}</dt><dd class="text-gray-900 dark:text-gray-100">{{ $bill->bill_date?->format('Y-m-d') }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Due date') }}</dt><dd class="text-gray-900 dark:text-gray-100">{{ $bill->due_date?->format('Y-m-d') }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Status') }}</dt><dd><span class="px-2 py-0.5 rounded text-xs">{{ $bill->status }}</span></dd></div>
@@ -17,10 +18,13 @@
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Balance due') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($bill->balance_due, 2) }} {{ $bill->currency }}</dd></div>
             </dl>
             @if(!$bill->isIssued() && auth()->user()?->can('accounts-payable.manage'))
-                <form method="POST" action="{{ route('accounts-payable.bills.issue', $bill->id) }}" class="mt-4">
-                    @csrf
-                    <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue bill') }}</button>
-                </form>
+                <div class="mt-4 flex gap-2">
+                    <a href="{{ route('accounts-payable.bills.edit', $bill->id) }}" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Edit bill') }}</a>
+                    <form method="POST" action="{{ route('accounts-payable.bills.issue', $bill->id) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue bill') }}</button>
+                    </form>
+                </div>
             @endif
         </div>
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">

@@ -74,6 +74,104 @@ class InvoiceService
     }
 
     /**
+     * Create a draft invoice with manual line items (no rating). Use for AR Entry.
+     *
+     * @param  array{client_id: int, invoice_date: string, due_date?: string, currency?: string, notes?: string, lines: array<array{description: string, amount: float}>}  $input
+     */
+    public function createManualInvoice(array $input): ArInvoice
+    {
+        return DB::transaction(function () use ($input) {
+            $clientId = (int) $input['client_id'];
+            $client = \App\Modules\BillingEngine\Infrastructure\Models\BillingClient::findOrFail($clientId);
+            $invoiceDate = $input['invoice_date'] ?? now()->toDateString();
+            $dueDate = $input['due_date'] ?? now()->addDays(30)->toDateString();
+            $currency = $input['currency'] ?? $client->currency;
+            $lines = $input['lines'] ?? [];
+            if (empty($lines)) {
+                throw new \InvalidArgumentException('At least one line is required.');
+            }
+
+            $invoice = ArInvoice::create([
+                'client_id' => $clientId,
+                'invoice_number' => $this->generateInvoiceNumber(),
+                'invoice_date' => $invoiceDate,
+                'due_date' => $dueDate,
+                'status' => 'draft',
+                'subtotal' => 0,
+                'tax_amount' => 0,
+                'total' => 0,
+                'currency' => $currency,
+                'notes' => $input['notes'] ?? null,
+            ]);
+
+            foreach ($lines as $line) {
+                $amount = (float) ($line['amount'] ?? 0);
+                $description = $line['description'] ?? '';
+                if ($amount <= 0 && $description === '') {
+                    continue;
+                }
+                ArInvoiceLine::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $description ?: 'Line',
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'amount' => $amount,
+                    'client_id' => $clientId,
+                ]);
+            }
+
+            $this->recalculateInvoiceTotals($invoice);
+            return $invoice->fresh();
+        });
+    }
+
+    /**
+     * Update a draft invoice (header and lines). Only allowed when status is draft.
+     *
+     * @param  array{client_id?: int, invoice_date: string, due_date?: string, currency?: string, notes?: string, lines: array<array{description: string, amount: float}>}  $input
+     */
+    public function updateDraftInvoice(ArInvoice $invoice, array $input): ArInvoice
+    {
+        if ($invoice->isIssued()) {
+            throw new \InvalidArgumentException('Cannot edit an issued invoice.');
+        }
+
+        return DB::transaction(function () use ($invoice, $input) {
+            $invoice->update([
+                'invoice_date' => $input['invoice_date'] ?? $invoice->invoice_date->toDateString(),
+                'due_date' => $input['due_date'] ?? $invoice->due_date->toDateString(),
+                'currency' => $input['currency'] ?? $invoice->currency,
+                'notes' => $input['notes'] ?? $invoice->notes,
+            ]);
+            if (isset($input['client_id'])) {
+                $invoice->update(['client_id' => (int) $input['client_id']]);
+            }
+
+            $invoice->lines()->delete();
+            $lines = $input['lines'] ?? [];
+            $clientId = (int) $invoice->client_id;
+            foreach ($lines as $line) {
+                $amount = (float) ($line['amount'] ?? 0);
+                $description = $line['description'] ?? '';
+                if ($amount <= 0 && $description === '') {
+                    continue;
+                }
+                ArInvoiceLine::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $description ?: 'Line',
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'amount' => $amount,
+                    'client_id' => $clientId,
+                ]);
+            }
+
+            $this->recalculateInvoiceTotals($invoice->fresh());
+            return $invoice->fresh();
+        });
+    }
+
+    /**
      * Create invoice with lines from BillingEngine rating (e.g. manual or batch).
      *
      * @param  array{client_id: int, invoice_date: string, due_date?: string, event_type: string, payload: array}  $input

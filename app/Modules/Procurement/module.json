@@ -1,0 +1,17 @@
+{
+    "name": "Procurement",
+    "slug": "procurement",
+    "enabled": true,
+    "version": "1.0.0",
+    "description": "Purchase requests and purchase orders",
+    "permissions": [
+        "procurement.view",
+        "procurement.manage"
+    ],
+    "nav": {
+        "label": "Procurement",
+        "route": "procurement.index",
+        "icon": "fas fa-shopping-cart",
+        "order": 35
+    }
+}

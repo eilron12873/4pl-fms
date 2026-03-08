@@ -2,7 +2,12 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">{{ __('Vendor Bills') }}</h2>
-            <a href="{{ route('accounts-payable.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-400">{{ __('Back to AP') }}</a>
+            <div class="flex gap-2 items-center">
+                @can('accounts-payable.manage')
+                <a href="{{ route('accounts-payable.bills.create') }}" class="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">{{ __('Create bill') }}</a>
+                @endcan
+                <a href="{{ route('accounts-payable.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-400">{{ __('Back to AP') }}</a>
+            </div>
         </div>
     </x-slot>
     <div class="py-4 max-w-7xl mx-auto sm:px-6 lg:px-8">

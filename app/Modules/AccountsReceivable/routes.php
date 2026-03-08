@@ -9,6 +9,10 @@ Route::middleware(['auth', 'verified', 'permission:accounts-receivable.view'])
     ->group(function () {
         Route::get('/', [AccountsReceivableController::class, 'index'])->name('index');
         Route::get('/invoices', [AccountsReceivableController::class, 'invoices'])->name('invoices.index');
+        Route::get('/invoices/create', [AccountsReceivableController::class, 'invoiceCreate'])->name('invoices.create')->middleware('permission:accounts-receivable.manage');
+        Route::post('/invoices', [AccountsReceivableController::class, 'invoiceStore'])->name('invoices.store')->middleware('permission:accounts-receivable.manage');
+        Route::get('/invoices/{id}/edit', [AccountsReceivableController::class, 'invoiceEdit'])->name('invoices.edit')->whereNumber('id')->middleware('permission:accounts-receivable.manage');
+        Route::put('/invoices/{id}', [AccountsReceivableController::class, 'invoiceUpdate'])->name('invoices.update')->whereNumber('id')->middleware('permission:accounts-receivable.manage');
         Route::get('/invoices/{id}', [AccountsReceivableController::class, 'invoiceShow'])->name('invoices.show')->whereNumber('id');
         Route::post('/invoices/{id}/issue', [AccountsReceivableController::class, 'issueInvoice'])->name('invoices.issue')->whereNumber('id')->middleware('permission:accounts-receivable.manage');
         Route::post('/invoices/{id}/credit-note', [AccountsReceivableController::class, 'creditNoteStore'])->name('invoices.credit-note')->whereNumber('id')->middleware('permission:accounts-receivable.manage');

@@ -136,6 +136,29 @@ class FinancialReportingController extends Controller
         ]);
     }
 
+    public function plPerRevenue(Request $request): View
+    {
+        $fromDate = $request->string('from_date')->toString() ?: now()->startOfMonth()->toDateString();
+        $toDate = $request->string('to_date')->toString() ?: now()->toDateString();
+        $periodCode = $request->string('period')->toString() ?: null;
+
+        if ($periodCode) {
+            $period = Period::where('code', $periodCode)->first();
+            if ($period) {
+                $fromDate = $period->start_date->toDateString();
+                $toDate = $period->end_date->toDateString();
+            }
+        }
+
+        $data = $this->reporting->plPerRevenue($fromDate, $toDate);
+        $periods = Period::orderByDesc('start_date')->limit(24)->get();
+
+        return view('financial-reporting::pl-per-revenue', [
+            'data' => $data,
+            'periods' => $periods,
+        ]);
+    }
+
     public function cashFlowAnalysis(Request $request): View
     {
         $fromDate = $request->string('from_date')->toString() ?: now()->startOfMonth()->toDateString();

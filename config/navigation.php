@@ -140,6 +140,18 @@ return [
                     'icon' => 'fas fa-money-check-alt',
                     'nav_key' => 'ap_payments',
                 ],
+                [
+                    'label' => 'Vouchers',
+                    'route' => 'accounts-payable.vouchers.index',
+                    'icon' => 'fas fa-receipt',
+                    'nav_key' => 'ap_vouchers',
+                ],
+                [
+                    'label' => 'Check register',
+                    'route' => 'accounts-payable.checks.index',
+                    'icon' => 'fas fa-money-check',
+                    'nav_key' => 'ap_checks',
+                ],
             ],
         ],
         [
@@ -380,6 +392,13 @@ return [
                     'icon' => 'fas fa-layer-group',
                     'permission' => 'financial-reporting.view',
                     'nav_key' => 'reports_pl_dimension',
+                ],
+                [
+                    'label' => 'P&L per Revenue',
+                    'route' => 'financial-reporting.pl-per-revenue',
+                    'icon' => 'fas fa-chart-pie',
+                    'permission' => 'financial-reporting.view',
+                    'nav_key' => 'reports_pl_per_revenue',
                 ],
                 [
                     'label' => 'Cash flow analysis',

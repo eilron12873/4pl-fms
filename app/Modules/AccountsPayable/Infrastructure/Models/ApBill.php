@@ -2,6 +2,7 @@
 
 namespace App\Modules\AccountsPayable\Infrastructure\Models;
 
+use App\Modules\Procurement\Infrastructure\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,7 @@ class ApBill extends Model
 
     protected $fillable = [
         'vendor_id',
+        'purchase_order_id',
         'bill_number',
         'bill_date',
         'due_date',
@@ -37,6 +39,11 @@ class ApBill extends Model
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class, 'vendor_id');
+    }
+
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
 
     public function lines(): HasMany

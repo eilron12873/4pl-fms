@@ -6,7 +6,9 @@ use App\Modules\AccountsPayable\Infrastructure\Models\ApBill;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApBillAdjustment;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApBillLine;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApBillPayment;
+use App\Modules\AccountsPayable\Infrastructure\Models\ApCheck;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApPayment;
+use App\Modules\AccountsPayable\Infrastructure\Models\ApVoucher;
 use App\Modules\AccountsPayable\Infrastructure\Models\Vendor;
 use App\Modules\CoreAccounting\Application\JournalService;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +72,103 @@ class BillService
         });
     }
 
+    /**
+     * Create a draft bill with manual line items (no journal). Use for AP Entry.
+     *
+     * @param  array{vendor_id: int, bill_date: string, due_date?: string, currency?: string, notes?: string, lines: array<array{description: string, amount: float}>}  $input
+     */
+    public function createManualBill(array $input): ApBill
+    {
+        return DB::transaction(function () use ($input) {
+            $vendorId = (int) $input['vendor_id'];
+            $vendor = Vendor::findOrFail($vendorId);
+            $billDate = $input['bill_date'] ?? now()->toDateString();
+            $dueDate = $input['due_date'] ?? now()->addDays($vendor->payment_terms_days)->toDateString();
+            $currency = $input['currency'] ?? $vendor->currency;
+            $lines = $input['lines'] ?? [];
+            if (empty($lines)) {
+                throw new \InvalidArgumentException('At least one line is required.');
+            }
+
+            $bill = ApBill::create([
+                'vendor_id' => $vendorId,
+                'purchase_order_id' => isset($input['purchase_order_id']) ? (int) $input['purchase_order_id'] : null,
+                'bill_number' => $this->generateBillNumber(),
+                'bill_date' => $billDate,
+                'due_date' => $dueDate,
+                'status' => 'draft',
+                'subtotal' => 0,
+                'tax_amount' => 0,
+                'total' => 0,
+                'currency' => $currency,
+                'notes' => $input['notes'] ?? null,
+            ]);
+
+            foreach ($lines as $line) {
+                $amount = (float) ($line['amount'] ?? 0);
+                $description = $line['description'] ?? '';
+                if ($amount <= 0 && $description === '') {
+                    continue;
+                }
+                ApBillLine::create([
+                    'bill_id' => $bill->id,
+                    'description' => $description ?: 'Line',
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'amount' => $amount,
+                    'vendor_id' => $vendorId,
+                ]);
+            }
+
+            $this->recalculateBillTotals($bill);
+            return $bill->fresh();
+        });
+    }
+
+    /**
+     * Update a draft bill (header and lines). Only allowed when status is draft.
+     */
+    public function updateDraftBill(ApBill $bill, array $input): ApBill
+    {
+        if ($bill->isIssued()) {
+            throw new \InvalidArgumentException('Cannot edit an issued bill.');
+        }
+
+        return DB::transaction(function () use ($bill, $input) {
+            $bill->update([
+                'bill_date' => $input['bill_date'] ?? $bill->bill_date->toDateString(),
+                'due_date' => $input['due_date'] ?? $bill->due_date->toDateString(),
+                'currency' => $input['currency'] ?? $bill->currency,
+                'notes' => $input['notes'] ?? $bill->notes,
+            ]);
+            if (isset($input['vendor_id'])) {
+                $bill->update(['vendor_id' => (int) $input['vendor_id']]);
+            }
+
+            $bill->lines()->delete();
+            $lines = $input['lines'] ?? [];
+            $vendorId = (int) $bill->vendor_id;
+            foreach ($lines as $line) {
+                $amount = (float) ($line['amount'] ?? 0);
+                $description = $line['description'] ?? '';
+                if ($amount <= 0 && $description === '') {
+                    continue;
+                }
+                ApBillLine::create([
+                    'bill_id' => $bill->id,
+                    'description' => $description ?: 'Line',
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                    'amount' => $amount,
+                    'vendor_id' => $vendorId,
+                ]);
+            }
+
+            $this->recalculateBillTotals($bill->fresh());
+            return $bill->fresh();
+        });
+    }
+
     public function issueBill(ApBill $bill, array $accountCodes = []): void
     {
         if ($bill->isIssued()) {
@@ -104,6 +203,9 @@ class BillService
     public function recordPayment(array $input): ApPayment
     {
         return DB::transaction(function () use ($input) {
+            $paymentMethod = $input['payment_method'] ?? 'ach';
+            $bankAccountId = isset($input['bank_account_id']) ? (int) $input['bank_account_id'] : null;
+
             $payment = ApPayment::create([
                 'vendor_id' => $input['vendor_id'],
                 'payment_date' => $input['payment_date'],
@@ -111,6 +213,8 @@ class BillService
                 'currency' => $input['currency'] ?? 'USD',
                 'reference' => $input['reference'] ?? null,
                 'notes' => $input['notes'] ?? null,
+                'payment_method' => $paymentMethod,
+                'bank_account_id' => $bankAccountId,
             ]);
 
             foreach ($input['allocations'] ?? [] as $alloc) {
@@ -130,8 +234,48 @@ class BillService
                 ]);
             }
 
+            ApVoucher::create([
+                'voucher_number' => $this->generateVoucherNumber(),
+                'payment_id' => $payment->id,
+                'voucher_date' => $payment->payment_date->toDateString(),
+            ]);
+
+            if ($paymentMethod === 'check') {
+                $vendor = Vendor::find($payment->vendor_id);
+                $payee = $vendor ? ($vendor->name) : 'Payee';
+                $checkNumber = $this->generateCheckNumber($bankAccountId);
+                ApCheck::create([
+                    'check_number' => $checkNumber,
+                    'payment_id' => $payment->id,
+                    'bank_account_id' => $bankAccountId,
+                    'check_date' => $payment->payment_date->toDateString(),
+                    'amount' => $payment->amount,
+                    'payee' => $payee,
+                    'status' => ApCheck::STATUS_PRINTED,
+                ]);
+            }
+
             return $payment;
         });
+    }
+
+    protected function generateVoucherNumber(): string
+    {
+        $prefix = 'AP-V-' . date('Y') . '-';
+        $last = ApVoucher::where('voucher_number', 'like', $prefix . '%')->orderByDesc('id')->first();
+        $seq = $last ? (int) substr($last->voucher_number, strlen($prefix)) + 1 : 1;
+        return $prefix . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+    }
+
+    protected function generateCheckNumber(?int $bankAccountId): string
+    {
+        $query = ApCheck::query();
+        if ($bankAccountId) {
+            $query->where('bank_account_id', $bankAccountId);
+        }
+        $last = $query->orderByDesc('id')->first();
+        $next = $last ? (int) $last->check_number + 1 : 1;
+        return (string) $next;
     }
 
     /**

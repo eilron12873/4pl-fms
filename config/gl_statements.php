@@ -18,6 +18,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | P&L per Revenue - Revenue breakdown by segment (account prefix)
+    |--------------------------------------------------------------------------
+    | Each entry: key, label, account_prefixes (single prefix per segment).
+    | Used by the "P&L per Revenue" report to show revenue by type.
+    */
+    'revenue_breakdown' => [
+        ['key' => 'revenue_41', 'label' => 'Revenue (41xx)', 'account_prefixes' => ['41']],
+        ['key' => 'revenue_42', 'label' => 'Revenue (42xx)', 'account_prefixes' => ['42']],
+        ['key' => 'revenue_43', 'label' => 'Revenue (43xx)', 'account_prefixes' => ['43']],
+        ['key' => 'revenue_44', 'label' => 'Revenue (44xx)', 'account_prefixes' => ['44']],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Balance Sheet Mappings
     |--------------------------------------------------------------------------
     | Sections for assets, liabilities, equity. As-of-date balances.
