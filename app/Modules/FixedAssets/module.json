@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Fixed Assets module for LFS",
     "permissions": [
-        "fixed-assets.view"
+        "fixed-assets.view",
+        "fixed-assets.manage"
     ],
     "nav": {
         "label": "Fixed Assets",

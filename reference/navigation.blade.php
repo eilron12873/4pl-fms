@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard.index') }}">
-                        <img src="{{ asset('image/qrssmall.png') }}" alt="4PL Logistics Management System" class="h-9 w-auto">
+                        <img src="{{ asset('image/qrssmall.png') }}" alt="4PL Financial Management System" class="h-9 w-auto">
                     </a>
                 </div>
 

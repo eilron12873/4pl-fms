@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Accounts Payable module for LFS",
     "permissions": [
-        "accounts-payable.view"
+        "accounts-payable.view",
+        "accounts-payable.manage"
     ],
     "nav": {
         "label": "Accounts Payable",

@@ -26,10 +26,10 @@
         </div>
         <div>
             <div class="font-semibold text-sm">
-                {{ $settings->company_name ?? '4PL LFS' }}
+                {{ $settings->company_name ?? '4PL FMS' }}
             </div>
             <div class="text-xs text-gray-300">
-                Logistics Financial System
+                Financial Management System
             </div>
         </div>
     </div>
@@ -39,18 +39,32 @@
             $coreRoutes = collect($coreMenuItems)
                 ->flatMap(function ($item) {
                     $routes = [];
-
                     if (! empty($item['route'] ?? null)) {
                         $routes[] = $item['route'];
                     }
-
                     foreach ($item['children'] ?? [] as $child) {
                         if (! empty($child['route'] ?? null)) {
                             $routes[] = $child['route'];
                         }
                     }
-
                     return $routes;
+                })
+                ->unique()
+                ->values()
+                ->all();
+
+            // Route prefixes already covered by config (e.g. core-accounting, fixed-assets, financial-reporting).
+            // Skip module nav link if its route prefix is in this set, so we don't show duplicate top-level entries.
+            $coreRoutePrefixes = collect($coreMenuItems)
+                ->flatMap(function ($item) {
+                    $prefixes = [];
+                    foreach ($item['children'] ?? [] as $child) {
+                        $r = $child['route'] ?? null;
+                        if ($r && str_contains($r, '.')) {
+                            $prefixes[] = explode('.', $r)[0];
+                        }
+                    }
+                    return $prefixes;
                 })
                 ->unique()
                 ->values()
@@ -152,6 +166,12 @@
             @endphp
 
             @if ($route && in_array($route, $coreRoutes, true))
+                @continue
+            @endif
+            @php
+                $moduleRoutePrefix = $route && str_contains($route, '.') ? explode('.', $route)[0] : null;
+            @endphp
+            @if ($moduleRoutePrefix && in_array($moduleRoutePrefix, $coreRoutePrefixes, true))
                 @continue
             @endif
 

@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "LFS Administration module for configuration and finance-focused administration",
     "permissions": [
-        "lfs-administration.view"
+        "lfs-administration.view",
+        "lfs-administration.manage"
     ],
     "nav": {
         "label": "LFS Administration",

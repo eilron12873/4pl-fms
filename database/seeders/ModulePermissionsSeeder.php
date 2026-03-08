@@ -28,6 +28,8 @@ class ModulePermissionsSeeder extends Seeder
         // Core (non-module) permissions used by navigation or core features
         $corePermissions = [
             'reports.view',
+            'integration.wms-billing', // WMS/integration layer can POST to wms-billing/feed
+            'integration.financial-events', // API: POST /api/financial-events/{event_type}
         ];
 
         $permissions = array_values(array_unique(array_merge($permissions, $corePermissions)));

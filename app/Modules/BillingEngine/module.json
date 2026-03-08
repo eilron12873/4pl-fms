@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Billing Engine module for LFS",
     "permissions": [
-        "billing-engine.view"
+        "billing-engine.view",
+        "billing-engine.manage"
     ],
     "nav": {
         "label": "Billing Engine",

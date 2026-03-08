@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Accounts Receivable module for LFS",
     "permissions": [
-        "accounts-receivable.view"
+        "accounts-receivable.view",
+        "accounts-receivable.manage"
     ],
     "nav": {
         "label": "Accounts Receivable",

@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Treasury module for LFS",
     "permissions": [
-        "treasury.view"
+        "treasury.view",
+        "treasury.manage"
     ],
     "nav": {
         "label": "Treasury",

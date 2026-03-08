@@ -31,5 +31,15 @@ class Journal extends Model
     {
         return $this->hasOne(PostingSource::class);
     }
+
+    public function reversalLinkAsOriginal(): HasOne
+    {
+        return $this->hasOne(ReversalLink::class, 'original_journal_id');
+    }
+
+    public function reversalLinkAsReversal(): HasOne
+    {
+        return $this->hasOne(ReversalLink::class, 'reversal_journal_id');
+    }
 }
 

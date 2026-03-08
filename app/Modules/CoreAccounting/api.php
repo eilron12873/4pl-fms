@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Modules\CoreAccounting\UI\Controllers\FinancialEventController;
 
-Route::middleware(['auth:sanctum'])
+Route::middleware(['auth:sanctum', 'permission:integration.financial-events'])
     ->prefix('financial-events')
     ->name('api.financial-events.')
     ->group(function () {

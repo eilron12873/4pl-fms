@@ -2,6 +2,9 @@
 
 namespace App\Modules\AccountsReceivable;
 
+use App\Events\JournalPosted;
+use App\Modules\AccountsReceivable\Listeners\RecordInvoiceLineFromJournal;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AccountsReceivableServiceProvider extends ServiceProvider
@@ -13,7 +16,7 @@ class AccountsReceivableServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        Event::listen(JournalPosted::class, RecordInvoiceLineFromJournal::class);
     }
 }
 

@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Core accounting engine module for LFS",
     "permissions": [
-        "core-accounting.view"
+        "core-accounting.view",
+        "core-accounting.manage"
     ],
     "nav": {
         "label": "Core Accounting",

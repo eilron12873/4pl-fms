@@ -2,17 +2,19 @@
 
 namespace App\Modules\CoreAccounting\UI\Controllers;
 
+use App\Events\JournalPosted;
 use App\Http\Controllers\Controller;
-use App\Modules\CoreAccounting\Application\JournalService;
+use App\Models\IntegrationLog;
+use App\Modules\CoreAccounting\Application\FinancialEventDispatcher;
+use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingSource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class FinancialEventController extends Controller
 {
     public function __construct(
-        protected JournalService $journalService,
+        protected FinancialEventDispatcher $dispatcher,
     ) {
     }
 
@@ -25,78 +27,85 @@ class FinancialEventController extends Controller
             'payload' => ['required', 'array'],
         ]);
 
+        $this->validateSignedPayloadIfPresent($request, $data);
+
         $existing = PostingSource::where('idempotency_key', $data['idempotency_key'])->first();
 
         if ($existing) {
+            IntegrationLog::create([
+                'event_type' => $event_type,
+                'idempotency_key' => $data['idempotency_key'],
+                'source_system' => $data['source_system'],
+                'source_reference' => $data['source_reference'],
+                'status' => IntegrationLog::STATUS_DUPLICATE,
+                'journal_id' => $existing->journal_id,
+            ]);
+
             return response()->json([
                 'status' => 'duplicate',
                 'journal_id' => $existing->journal_id,
             ]);
         }
 
-        // Minimal implementation: support simple shipment-delivered posting when required fields exist.
-        if ($event_type === 'shipment-delivered') {
-            $payload = $data['payload'];
+        try {
+            $result = $this->dispatcher->dispatch($event_type, $data['payload'], [
+                'idempotency_key' => $data['idempotency_key'],
+                'source_system' => $data['source_system'],
+                'source_reference' => $data['source_reference'],
+            ]);
+        } catch (\Throwable $e) {
+            IntegrationLog::create([
+                'event_type' => $event_type,
+                'idempotency_key' => $data['idempotency_key'],
+                'source_system' => $data['source_system'],
+                'source_reference' => $data['source_reference'],
+                'status' => IntegrationLog::STATUS_ERROR,
+                'message' => $e->getMessage(),
+            ]);
 
-            if (! isset($payload['amount'], $payload['revenue_account_code'], $payload['receivable_account_code'])) {
-                throw ValidationException::withMessages([
-                    'payload' => ['For shipment-delivered, payload.amount, payload.revenue_account_code, and payload.receivable_account_code are required.'],
-                ]);
-            }
-
-            $amount = (float) $payload['amount'];
-
-            $journal = $this->journalService->post(
-                [
-                    [
-                        'account_code' => $payload['receivable_account_code'],
-                        'debit' => $amount,
-                        'credit' => 0,
-                        'shipment_id' => $payload['shipment_id'] ?? null,
-                        'client_id' => $payload['client_id'] ?? null,
-                    ],
-                    [
-                        'account_code' => $payload['revenue_account_code'],
-                        'debit' => 0,
-                        'credit' => $amount,
-                        'shipment_id' => $payload['shipment_id'] ?? null,
-                        'client_id' => $payload['client_id'] ?? null,
-                    ],
-                ],
-                [
-                    'description' => $payload['description'] ?? 'Shipment delivered',
-                    'journal_date' => $payload['journal_date'] ?? now()->toDateString(),
-                    'source_system' => $data['source_system'],
-                    'source_type' => $payload['source_type'] ?? 'shipment',
-                    'source_reference' => $data['source_reference'],
-                    'event_type' => $event_type,
-                    'idempotency_key' => $data['idempotency_key'],
-                    'payload' => $payload,
-                ],
-            );
-
-            return response()->json([
-                'status' => 'posted',
-                'journal_id' => $journal->id,
-                'journal_number' => $journal->journal_number,
-            ], 201);
+            throw $e;
         }
 
-        // For other event types, just record the posting source as unhandled for now.
-        PostingSource::create([
-            'journal_id' => 0,
-            'source_system' => $data['source_system'],
-            'source_type' => $data['payload']['source_type'] ?? null,
-            'source_reference' => $data['source_reference'],
+        $status = $result['status'];
+        IntegrationLog::create([
             'event_type' => $event_type,
             'idempotency_key' => $data['idempotency_key'],
-            'payload' => $data['payload'],
+            'source_system' => $data['source_system'],
+            'source_reference' => $data['source_reference'],
+            'status' => $status,
+            'journal_id' => $result['journal_id'] ?? null,
+            'message' => $result['message'] ?? null,
         ]);
 
-        return response()->json([
-            'status' => 'accepted',
-            'message' => 'Event recorded for future processing.',
-        ], 202);
+        if ($status === 'posted' && ! empty($result['journal_id'])) {
+            $journal = Journal::with('lines')->find($result['journal_id']);
+            if ($journal) {
+                JournalPosted::dispatch($journal, [
+                    'event_type' => $event_type,
+                    'payload' => $data['payload'],
+                    'source_system' => $data['source_system'],
+                    'source_reference' => $data['source_reference'],
+                ]);
+            }
+        }
+
+        $code = $status === 'posted' ? 201 : 202;
+
+        return response()->json($result, $code);
+    }
+
+    /**
+     * Placeholder for signed payload validation per enterprise spec.
+     * When X-Payload-Signature (or similar) is present, verify signature; otherwise allow.
+     */
+    protected function validateSignedPayloadIfPresent(Request $request, array $data): void
+    {
+        $signature = $request->header('X-Payload-Signature');
+        if ($signature === null || $signature === '') {
+            return;
+        }
+        // TODO: Verify $signature against payload (e.g. HMAC of json_encode($data['payload']))
+        // when signing key/algorithm is defined. For now we accept any value.
     }
 }
 

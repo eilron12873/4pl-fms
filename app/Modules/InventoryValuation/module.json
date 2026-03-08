@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Inventory Valuation module for LFS",
     "permissions": [
-        "inventory-valuation.view"
+        "inventory-valuation.view",
+        "inventory-valuation.manage"
     ],
     "nav": {
         "label": "Inventory Valuation",
