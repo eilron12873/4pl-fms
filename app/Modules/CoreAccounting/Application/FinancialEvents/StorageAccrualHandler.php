@@ -2,6 +2,7 @@
 
 namespace App\Modules\CoreAccounting\Application\FinancialEvents;
 
+use App\Modules\CoreAccounting\Application\GLPostingEngine\GLPostingEngine;
 use App\Modules\CoreAccounting\Application\JournalService;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use Illuminate\Validation\ValidationException;
@@ -10,6 +11,7 @@ class StorageAccrualHandler implements FinancialEventHandlerInterface
 {
     public function __construct(
         protected JournalService $journalService,
+        protected GLPostingEngine $glPostingEngine,
     ) {
     }
 
@@ -22,26 +24,32 @@ class StorageAccrualHandler implements FinancialEventHandlerInterface
     {
         $this->validate($payload);
 
-        $amount = (float) $payload['amount'];
-        $storageExpenseCode = $payload['storage_expense_account_code'] ?? '5100';
-        $accruedLiabilityCode = $payload['accrued_liability_account_code'] ?? '2100';
+        $eventType = 'storage-accrual';
 
-        $lines = [
-            [
-                'account_code' => $storageExpenseCode,
-                'debit' => $amount,
-                'credit' => 0,
-                'client_id' => $payload['client_id'] ?? null,
-                'warehouse_id' => $payload['warehouse_id'] ?? null,
-            ],
-            [
-                'account_code' => $accruedLiabilityCode,
-                'debit' => 0,
-                'credit' => $amount,
-                'client_id' => $payload['client_id'] ?? null,
-                'warehouse_id' => $payload['warehouse_id'] ?? null,
-            ],
-        ];
+        $lines = $this->glPostingEngine->buildJournal($eventType, $payload);
+
+        if ($lines === null) {
+            $amount = (float) $payload['amount'];
+            $storageExpenseCode = $payload['storage_expense_account_code'] ?? '5100';
+            $accruedLiabilityCode = $payload['accrued_liability_account_code'] ?? '2100';
+
+            $lines = [
+                [
+                    'account_code' => $storageExpenseCode,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'client_id' => $payload['client_id'] ?? null,
+                    'warehouse_id' => $payload['warehouse_id'] ?? null,
+                ],
+                [
+                    'account_code' => $accruedLiabilityCode,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'client_id' => $payload['client_id'] ?? null,
+                    'warehouse_id' => $payload['warehouse_id'] ?? null,
+                ],
+            ];
+        }
 
         $journal = $this->journalService->post($lines, [
             'description' => $payload['description'] ?? 'Storage accrual',
@@ -49,7 +57,7 @@ class StorageAccrualHandler implements FinancialEventHandlerInterface
             'source_system' => $context['source_system'],
             'source_type' => $payload['source_type'] ?? 'storage',
             'source_reference' => $context['source_reference'],
-            'event_type' => 'storage-accrual',
+            'event_type' => $eventType,
             'idempotency_key' => $context['idempotency_key'],
             'payload' => $payload,
         ]);

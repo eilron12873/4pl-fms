@@ -2,7 +2,7 @@
 
 ## 1. Purpose & Scope
 
-The **Core Accounting** module is the foundational financial engine of LFS. It owns the **Chart of Accounts, Journal Engine, Posting Sources, and Accounting Periods**, and enforces the platform’s accounting invariants:
+The **Core Accounting** module is the foundational financial engine of LFS. It owns the **Chart of Accounts, Journal Engine, GL Posting Rules Engine, Posting Sources, and Accounting Periods**, and enforces the platform’s accounting invariants:
 
 - Double-entry (debit = credit)
 - Immutable ledger (no in-place edits; corrections via reversal)
@@ -25,9 +25,9 @@ This document describes:
 - **Module pattern**: Laravel modules under `app/Modules/CoreAccounting`
 - **Layers**:
   - `Domain`: core rules and exceptions (e.g. `JournalImmutableException`, `PeriodLockedException`)
-  - `Application`: services and event handlers (e.g. `JournalService`, `FinancialEventDispatcher`, `*Handler` classes)
-  - `Infrastructure`: Eloquent models and persistence (e.g. `Account`, `Journal`, `JournalLine`, `Period`, `PostingSource`, `ReversalLink`)
-  - `UI`: controllers + Blade views for internal operator screens (accounts, journals, posting sources, periods)
+  - `Application`: services and event handlers (e.g. `JournalService`, `FinancialEventDispatcher`, `GLPostingEngine`, `PostingRuleResolver`, `PostingRuleValidator`, `*Handler` classes)
+  - `Infrastructure`: Eloquent models and persistence (e.g. `Account`, `Journal`, `JournalLine`, `PostingRule`, `PostingRuleLine`, `Period`, `PostingSource`, `ReversalLink`)
+  - `UI`: controllers + Blade views for internal operator screens (accounts, journals, posting sources, periods, posting rules)
   - `API`: event entrypoints for posting financial events from WMS/LMS (`api.php`)
 - **Service provider**: `CoreAccountingServiceProvider` registers a singleton `FinancialEventDispatcher` in the container.
 
@@ -39,6 +39,10 @@ Database objects (via migrations):
 - `posting_sources` – idempotency + source-system linkage per journal
 - `reversal_links` – linkage of original ↔ reversal journals
 - `periods` – accounting periods with status (open/closed) and dates
+- `posting_rules` – event-to-rule headers for the GL Posting Rules Engine
+- `posting_rule_lines` – debit/credit line definitions, amount source, dimension mapping, and optional resolver hints per rule line
+- `account_resolvers` – dynamic account mapping entries keyed by resolver type and payload/dimension keys
+- `posting_rule_conditions` – conditional expressions that control when a posting rule applies
 
 ---
 
@@ -67,8 +71,27 @@ Database objects (via migrations):
   - Represents accounting periods with `code`, `start_date`, `end_date`, `status`, `closed_at`.
   - Helper like `isOpen()` is used by `JournalService` to block posting to closed periods.
 
-- `ReversalLink`
+-- `ReversalLink`
   - Stores the linkage between an original journal and its reversal.
+
+- `PostingRule`
+  - Represents a high-level GL posting rule for a specific financial event type (e.g. `shipment-delivered`, `storage-accrual`).
+  - Fields: `event_type`, `description`, `is_active`.
+  - Relation: `lines` provides the ordered collection of `PostingRuleLine` records.
+
+- `PostingRuleLine`
+  - Defines one debit or credit leg of a posting rule.
+  - Fields: `account_id`, `entry_type` (`debit` / `credit`), `amount_source` (payload field), `dimension_source` (JSON mapping of profitability dimensions), `resolver_type` (optional dynamic account resolver hint), `sequence`.
+
+- `AccountResolver`
+  - Supports dynamic GL account resolution for rule lines.
+  - Fields: `resolver_type`, `dimension_key`, `dimension_value`, `account_id`, `priority`.
+  - Typical use: `resolver_type = revenue_by_service_line`, `dimension_key = service_line`, mapping values like `warehousing` or `transport` to specific revenue accounts.
+
+- `PostingRuleCondition`
+  - Stores conditional expressions for when a `PostingRule` should apply.
+  - Fields: `posting_rule_id`, `field_name`, `operator`, `comparison_value`, `priority`.
+  - Example: `field_name = shipment_type`, `operator = '='`, `comparison_value = subcontracted` for subcontracted vendor invoices.
 
 ### 3.2 Application Services
 
@@ -89,17 +112,56 @@ Database objects (via migrations):
     - Loads all lines, creates an opposite-sign set of lines, posts them as a new journal.
     - Writes a `ReversalLink` and logs `journal.reversed`.
 
+- `GLPostingEngine`
+  - **Responsibility**: configurable translation layer between financial events and journal lines.
+  - For a given `event_type` and payload, it:
+    - Uses `PostingRuleResolver` to load the active `PostingRule` + `PostingRuleLine`s, including any conditional rules.
+    - Uses `PostingRuleValidator` to ensure the rule is usable (active, ≥2 lines, at least one debit and one credit, accounts exist).
+    - Resolves `amount_source` from the payload and builds debit/credit values per line.
+    - Resolves `dimension_source` JSON (e.g. `"client_id": "payload.client_id"`) into the journal line’s profitability dimensions.
+    - Uses `AccountResolverService` when `resolver_type` is set on a rule line to dynamically override the GL account based on payload/dimension values (with safe fallback to the static line account).
+  - Returns an array of normalized journal lines ready for `JournalService::post()`, or `null` when no active rule exists (so handlers can safely fall back to legacy logic).
+
+- `PostingRuleResolver`
+  - Locates all active rules for a given `event_type` and uses `ConditionalRuleEngine` to choose the best match for the current payload.
+  - If no conditional rule matches, falls back to the first active rule (preserving existing behavior).
+
+- `ConditionalRuleEngine`
+  - Evaluates `PostingRuleCondition` expressions (`field_name`, `operator`, `comparison_value`) against the payload.
+  - Supports `=`, `!=`, `>`, `<`, `IN`, `NOT IN` operators for basic enterprise rule logic.
+
+- `AccountResolverService`
+  - Resolves the effective `account_id` for a `PostingRuleLine` when `resolver_type` is configured.
+  - Queries `AccountResolver` entries (e.g. `resolver_type = revenue_by_service_line`) and matches against payload/dimension values such as `service_line`.
+
 - `FinancialEventDispatcher`
   - Maps incoming **financial events** (e.g. shipment delivered, storage accrual, vendor invoice approved, project milestone completed) to specific handler classes.
   - Resolves and invokes handlers implementing `FinancialEventHandlerInterface`.
   - Ensures that handler output (a `Journal` or null) is normalized for the caller.
 
-- `FinancialEvents\*Handler` classes
-  - Examples: `ShipmentDeliveredHandler`, `StorageAccrualHandler`, `VendorInvoiceApprovedHandler`, `ProjectMilestoneCompletedHandler`.
+-- `FinancialEvents\*Handler` classes
+  - Examples:
+    - `ShipmentDeliveredHandler`
+    - `StorageAccrualHandler`
+    - `StorageDailyAccrualHandler`
+    - `PodConfirmedHandler`
+    - `FreightCostAccrualHandler`
+    - `FuelExpenseRecordedHandler`
+    - `VendorInvoiceApprovedHandler`
+    - `VendorPaymentProcessedHandler`
+    - `ClientInvoiceIssuedHandler`
+    - `ClientPaymentReceivedHandler`
+    - `ClientCreditNoteHandler`
+    - `PurchaseOrderReceivedHandler`
+    - `InventoryAdjustmentHandler`
+    - `AssetAcquisitionHandler`
+    - `DepreciationPostingHandler`
+    - `ProjectMilestoneCompletedHandler`
   - Responsibilities:
-    - Validate event payload.
-    - Derive the correct GL accounts and dimensions.
-    - Build the line array for `JournalService::post()`.
+    - Validate event payload (shape and required fields) according to the Financial Event Catalog.
+    - Delegate GL account and dimension mapping to `GLPostingEngine` when a posting rule exists for the event.
+    - Fall back to the existing hardcoded mapping only for legacy events where rules are not yet configured (to avoid regressions).
+    - Build the final line array for `JournalService::post()`.
     - Attach appropriate `source_system`, `source_reference`, `event_type`, and `idempotency_key`.
 
 ### 3.3 UI Controllers & Views
@@ -109,6 +171,7 @@ Database objects (via migrations):
   - **Accounts**: list and detail views for the chart of accounts.
   - **Journals**: list and detail view; includes reversal linkage and posting source details.
   - **Posting sources**: monitor incoming financial events and their resulting journals.
+  - **Posting rules**: list, create, and edit GL posting rules (event type, description, active flag, rule lines, dimension mappings).
   - **Periods**:
     - `periods.index`: view existing periods (with sorting, status).
     - `periods.close`: close a period (sets status, `closed_at`, and logs via `AuditService`).
@@ -138,6 +201,9 @@ Cards:
 - **Period Management**
   - Navigates to `/core-accounting/periods`.
   - Used for **opening/closing accounting periods**.
+- **Posting Rules**
+  - Navigates to `/core-accounting/posting-rules`.
+  - Used for **configuring GL posting rules** that drive the GL Posting Rules Engine.
 
 Each feature screen has a **“Back to Core Accounting”** link in the header that returns to this dashboard.
 
@@ -212,6 +278,37 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
   - Effect:
     - `JournalService::assertPeriodOpenForDate()` then blocks any new postings or reversals into that date range, implementing **hard period locking**.
 
+#### Posting Rules Menu
+
+- **List page**
+  - Route: `GET /core-accounting/posting-rules`.
+  - Shows all configured posting rules with:
+    - Event type, description, active flag, and line count.
+  - Primary use:
+    - Quick overview of which financial events are currently driven by configurable posting rules.
+
+- **Create/Edit rule**
+  - Routes:
+    - `GET /core-accounting/posting-rules/create`
+    - `GET /core-accounting/posting-rules/{id}/edit`
+    - `POST /core-accounting/posting-rules`
+    - `PUT /core-accounting/posting-rules/{id}`
+  - Requires `core-accounting.manage` permission.
+  - Fields:
+    - `event_type` (e.g. `shipment-delivered`, `storage-accrual`, `vendor-invoice-approved`, `project-milestone-completed`).
+    - `description` and `is_active`.
+    - One or more rule lines:
+      - `account_id` (posting account from the Chart of Accounts).
+      - `entry_type` (`debit` / `credit`).
+      - `amount_source` (payload field name, typically `amount`).
+      - Dimension checkboxes (e.g. client, shipment, route, warehouse, vehicle, project, service line, cost center) that map to payload fields such as `payload.client_id`.
+      - Optional `resolver_type` hint (e.g. `revenue_by_service_line`) that activates dynamic account resolution via `AccountResolver`.
+     - Optional conditions:
+       - Each condition row has `field_name` (payload key), `operator`, and `comparison_value`.
+       - Used to apply this rule only when certain business criteria are met (e.g. `shipment_type = subcontracted`).
+  - Effect:
+    - Changes take effect immediately for subsequent financial events and are consumed by the `GLPostingEngine`, including conditional rule selection and dynamic account resolution.
+
 ---
 
 ## 4. Core Workflows
@@ -219,7 +316,23 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
 ### 4.1 Event-Driven Posting Workflow
 
 1. **Operational event occurs** in WMS/LMS  
-   Example: `shipment_delivered`, `storage_accrual`, `vendor_invoice_approved`, `project_milestone_completed`.
+   Examples aligned with the Financial Event Catalog:
+   - `shipment_delivered`
+   - `storage_accrual`
+   - `storage_daily_accrual`
+   - `pod_confirmed`
+   - `freight_cost_accrual`
+   - `fuel_expense_recorded`
+   - `vendor_invoice_approved`
+   - `vendor_payment_processed`
+   - `client_invoice_issued`
+   - `client_payment_received`
+   - `client_credit_note`
+   - `purchase_order_received`
+   - `inventory_adjustment`
+   - `asset_acquisition`
+   - `depreciation_posting`
+   - `project_milestone_completed`
 
 2. **WMS/LMS calls LFS API**  
    - Endpoint: `POST /api/financial-events/{event_type}`  
@@ -229,10 +342,11 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
    - Dispatcher chooses the appropriate handler based on `{event_type}`.
    - Passes payload + context (tenant, environment, correlation IDs).
 
-4. **Event handler builds journal lines**
+4. **Event handler builds journal lines (via GL Posting Rules Engine)**
    - Validates business rules (required fields, allowed transitions).
-   - Maps to GL accounts and dimensions.
-   - Constructs a list of debit/credit lines for `JournalService::post()`.
+   - Calls `GLPostingEngine::buildJournal(event_type, payload)` to translate the event into debit/credit lines using `posting_rules` and `posting_rule_lines`.
+   - If no active rule exists for the event type, falls back to the existing inline mapping logic to ensure backward compatibility.
+   - Produces a normalized list of debit/credit lines for `JournalService::post()`.
 
 5. **JournalService::post()**
    - Ensures **balance** and checks **period open**.
@@ -258,6 +372,13 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
   - Journals index provides chronological list with line counts.
   - Detail view includes lines, dimensions, posting source, and reversal relationships.
 
+- **Posting Rules Management**
+  - Default rules are seeded via `PostingRulesSeeder` to mirror the legacy hardcoded postings for common events (`shipment-delivered`, `storage-accrual`, `vendor-invoice-approved`, `project-milestone-completed`).
+  - Seeder also demonstrates enterprise patterns:
+    - Dynamic revenue-by-service-line mapping for `shipment-delivered` using `AccountResolver` entries (e.g. warehousing → storage revenue, transport → freight revenue, project cargo → project revenue).
+    - A conditional rule for `vendor-invoice-approved` when `shipment_type = subcontracted`, posting to cost-of-freight accounts instead of standard transport expense.
+  - Finance users with `core-accounting.manage` permission can adjust these rules (accounts, amount source field, active flag, mapped dimensions, resolver hints, and basic conditions) through the Posting Rules UI without a code change.
+
 ---
 
 ## 5. Design Decisions & Guarantees
@@ -282,10 +403,21 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
 ## 6. How the Module Was Created (Build Notes)
 
 - Implemented as a **standalone Laravel module** under `app/Modules/CoreAccounting` to keep core accounting concerns isolated.
-- Database structure was introduced through a series of migrations to create `accounts`, `journals`, `journal_lines`, `posting_sources`, `reversal_links`, and `periods` tables, with indexes on high-volume columns (dates, foreign keys, dimensions).
-- Application logic is concentrated in `JournalService` and **financial event handlers**, called via `FinancialEventDispatcher`, which is registered as a singleton in `CoreAccountingServiceProvider`.
-- UI routes are grouped under the `core-accounting` prefix, with `core-accounting.view` and `core-accounting.manage` permissions controlling access.
+- Database structure was introduced through a series of migrations to create `accounts`, `journals`, `journal_lines`, `posting_sources`, `reversal_links`, `periods`, `posting_rules`, `posting_rule_lines`, `account_resolvers`, and `posting_rule_conditions` tables, with indexes on high-volume columns (dates, foreign keys, dimensions).
+- Application logic is concentrated in `JournalService`, the **GL Posting Rules Engine** (`GLPostingEngine`, `PostingRuleResolver`, `PostingRuleValidator`, `AccountResolverService`, `ConditionalRuleEngine`), and financial event handlers, called via `FinancialEventDispatcher`, which is registered as a singleton in `CoreAccountingServiceProvider`.
+- UI routes are grouped under the `core-accounting` prefix, with `core-accounting.view` and `core-accounting.manage` permissions controlling access, including Posting Sources and Posting Rules screens.
 - Integration contracts are defined in `api.php` under the module, exposing financial event endpoints for WMS/LMS and other systems.
+
+### 6.1 Alignment with Domain Blueprint & COA Design
+
+- The implemented Chart of Accounts follows the **LFS Chart of Accounts Master Design**:
+  - Uses the 1xxx–8xxx major group structure (Assets, Liabilities, Equity, Revenue, Cost of Services, Operating Expenses, Other Income, Other Expenses).
+  - Seeds logistics-native revenue and cost accounts (e.g. warehousing, transport, project logistics, value-added services, fuel, tolls, subcontracted freight) via `ChartOfAccountsSeeder`.
+  - Ensures compatibility with profitability dimensions (client, shipment, route, warehouse, vehicle, project, service line, cost center) at the journal line level.
+- The Core Accounting architecture is derived from the **Core Accounting Domain Blueprint (Laravel)**:
+  - Domain exceptions and responsibilities match the blueprint (period governance, double-entry validation, posting source traceability, configurable posting rules).
+  - Application services (`JournalService`, `FinancialEventDispatcher`, `GLPostingEngine`, rule and account resolvers) implement the recommended event → rule → journal pipeline.
+  - Infrastructure repositories (`AccountRepository`, `PostingRuleRepository`, `JournalRepository`) provide the persistence access layer described in the blueprint while remaining internal implementation details.
 
 ---
 
@@ -303,10 +435,15 @@ These are **optional improvements** that can strengthen robustness, usability, a
 
 ### 7.2 Stronger Idempotency & Duplicate Detection
 
-Current posting sources already store `idempotency_key`, but you can:
+Current implementation already enforces strong idempotency for financial events:
 
-- Enforce **unique index** on `(source_system, idempotency_key)` in `posting_sources` to hard-block duplicates.
-- Extend `FinancialEventDispatcher` to **short-circuit** if an identical posting source already exists for the same event.
+- `posting_sources.idempotency_key` has a unique constraint, so duplicate keys are rejected at the database level.
+- `FinancialEventController` checks for an existing `PostingSource` before dispatching and returns a `duplicate` status without reposting the journal.
+
+Further hardening (optional future work) could:
+
+- Add an additional composite index on `(source_system, idempotency_key)` if tenant-specific idempotency is required.
+- Extend `FinancialEventDispatcher` to short-circuit at the dispatcher layer based on existing posting sources or integration logs.
 
 ### 7.3 Enhanced Period Management
 

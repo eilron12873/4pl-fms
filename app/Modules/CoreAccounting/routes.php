@@ -8,6 +8,7 @@ Route::middleware(['auth', 'verified', 'permission:core-accounting.view'])
     ->name('core-accounting.')
     ->group(function () {
         Route::get('/', [CoreAccountingController::class, 'index'])->name('index');
+        Route::get('/overview.json', [CoreAccountingController::class, 'overviewJson'])->name('overview.json');
         Route::get('/accounts', [CoreAccountingController::class, 'accounts'])->name('accounts.index');
         Route::get('/accounts/{id}', [CoreAccountingController::class, 'accountShow'])->name('accounts.show')->whereNumber('id');
         Route::get('/journals', [CoreAccountingController::class, 'journals'])->name('journals.index');
@@ -15,5 +16,10 @@ Route::middleware(['auth', 'verified', 'permission:core-accounting.view'])
         Route::get('/posting-sources', [CoreAccountingController::class, 'postingSources'])->name('posting-sources.index');
         Route::get('/periods', [CoreAccountingController::class, 'periods'])->name('periods.index');
         Route::post('/periods/{id}/close', [CoreAccountingController::class, 'closePeriod'])->name('periods.close')->whereNumber('id')->middleware('permission:core-accounting.manage');
+        Route::get('/posting-rules', [CoreAccountingController::class, 'postingRules'])->name('posting-rules.index');
+        Route::get('/posting-rules/create', [CoreAccountingController::class, 'postingRulesCreate'])->name('posting-rules.create')->middleware('permission:core-accounting.manage');
+        Route::post('/posting-rules', [CoreAccountingController::class, 'postingRulesStore'])->name('posting-rules.store')->middleware('permission:core-accounting.manage');
+        Route::get('/posting-rules/{id}/edit', [CoreAccountingController::class, 'postingRulesEdit'])->name('posting-rules.edit')->whereNumber('id')->middleware('permission:core-accounting.manage');
+        Route::put('/posting-rules/{id}', [CoreAccountingController::class, 'postingRulesUpdate'])->name('posting-rules.update')->whereNumber('id')->middleware('permission:core-accounting.manage');
     });
 

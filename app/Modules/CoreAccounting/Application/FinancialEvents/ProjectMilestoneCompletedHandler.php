@@ -2,6 +2,7 @@
 
 namespace App\Modules\CoreAccounting\Application\FinancialEvents;
 
+use App\Modules\CoreAccounting\Application\GLPostingEngine\GLPostingEngine;
 use App\Modules\CoreAccounting\Application\JournalService;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use Illuminate\Validation\ValidationException;
@@ -10,6 +11,7 @@ class ProjectMilestoneCompletedHandler implements FinancialEventHandlerInterface
 {
     public function __construct(
         protected JournalService $journalService,
+        protected GLPostingEngine $glPostingEngine,
     ) {
     }
 
@@ -22,26 +24,32 @@ class ProjectMilestoneCompletedHandler implements FinancialEventHandlerInterface
     {
         $this->validate($payload);
 
-        $amount = (float) $payload['amount'];
-        $receivableCode = $payload['receivable_account_code'] ?? '1200';
-        $revenueCode = $payload['revenue_account_code'] ?? '4100';
+        $eventType = 'project-milestone-completed';
 
-        $lines = [
-            [
-                'account_code' => $receivableCode,
-                'debit' => $amount,
-                'credit' => 0,
-                'project_id' => $payload['project_id'] ?? null,
-                'client_id' => $payload['client_id'] ?? null,
-            ],
-            [
-                'account_code' => $revenueCode,
-                'debit' => 0,
-                'credit' => $amount,
-                'project_id' => $payload['project_id'] ?? null,
-                'client_id' => $payload['client_id'] ?? null,
-            ],
-        ];
+        $lines = $this->glPostingEngine->buildJournal($eventType, $payload);
+
+        if ($lines === null) {
+            $amount = (float) $payload['amount'];
+            $receivableCode = $payload['receivable_account_code'] ?? '1200';
+            $revenueCode = $payload['revenue_account_code'] ?? '4100';
+
+            $lines = [
+                [
+                    'account_code' => $receivableCode,
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'project_id' => $payload['project_id'] ?? null,
+                    'client_id' => $payload['client_id'] ?? null,
+                ],
+                [
+                    'account_code' => $revenueCode,
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'project_id' => $payload['project_id'] ?? null,
+                    'client_id' => $payload['client_id'] ?? null,
+                ],
+            ];
+        }
 
         $journal = $this->journalService->post($lines, [
             'description' => $payload['description'] ?? 'Project milestone completed',
@@ -49,7 +57,7 @@ class ProjectMilestoneCompletedHandler implements FinancialEventHandlerInterface
             'source_system' => $context['source_system'],
             'source_type' => $payload['source_type'] ?? 'project_milestone',
             'source_reference' => $context['source_reference'],
-            'event_type' => 'project-milestone-completed',
+            'event_type' => $eventType,
             'idempotency_key' => $context['idempotency_key'],
             'payload' => $payload,
         ]);

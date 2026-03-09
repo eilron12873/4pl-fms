@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(ModulePermissionsSeeder::class);
         $this->call(ChartOfAccountsSeeder::class);
+        $this->call(PostingRulesSeeder::class);
         $this->call(PeriodsSeeder::class);
         $this->call(ServiceTypesSeeder::class);
         $this->call(VendorsSeeder::class);

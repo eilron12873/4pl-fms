@@ -48,6 +48,16 @@
                         </div>
                     </div>
                 </a>
+                <a href="{{ route('core-accounting.posting-rules.index') }}"
+                   class="block p-6 bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <div class="flex items-center">
+                        <i class="fas fa-random text-2xl text-teal-600 dark:text-teal-400 mr-4"></i>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Posting Rules') }}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Configure GL posting rules') }}</p>
+                        </div>
+                    </div>
+                </a>
             </div>
         </div>
     </div>

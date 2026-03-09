@@ -3,10 +3,22 @@
 namespace App\Modules\CoreAccounting\Application;
 
 use App\Modules\CoreAccounting\Application\FinancialEvents\FinancialEventHandlerInterface;
+use App\Modules\CoreAccounting\Application\FinancialEvents\AssetAcquisitionHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\ClientCreditNoteHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\ClientInvoiceIssuedHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\ClientPaymentReceivedHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\DepreciationPostingHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\FreightCostAccrualHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\FuelExpenseRecordedHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\InventoryAdjustmentHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\PodConfirmedHandler;
 use App\Modules\CoreAccounting\Application\FinancialEvents\ProjectMilestoneCompletedHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\PurchaseOrderReceivedHandler;
 use App\Modules\CoreAccounting\Application\FinancialEvents\ShipmentDeliveredHandler;
 use App\Modules\CoreAccounting\Application\FinancialEvents\StorageAccrualHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\StorageDailyAccrualHandler;
 use App\Modules\CoreAccounting\Application\FinancialEvents\VendorInvoiceApprovedHandler;
+use App\Modules\CoreAccounting\Application\FinancialEvents\VendorPaymentProcessedHandler;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingSource;
 use Illuminate\Contracts\Container\Container;
@@ -20,7 +32,19 @@ class FinancialEventDispatcher
     {
         $this->register($container->make(ShipmentDeliveredHandler::class));
         $this->register($container->make(StorageAccrualHandler::class));
+        $this->register($container->make(StorageDailyAccrualHandler::class));
+        $this->register($container->make(PodConfirmedHandler::class));
+        $this->register($container->make(FreightCostAccrualHandler::class));
+        $this->register($container->make(FuelExpenseRecordedHandler::class));
+        $this->register($container->make(ClientInvoiceIssuedHandler::class));
+        $this->register($container->make(ClientPaymentReceivedHandler::class));
+        $this->register($container->make(ClientCreditNoteHandler::class));
         $this->register($container->make(VendorInvoiceApprovedHandler::class));
+        $this->register($container->make(VendorPaymentProcessedHandler::class));
+        $this->register($container->make(PurchaseOrderReceivedHandler::class));
+        $this->register($container->make(InventoryAdjustmentHandler::class));
+        $this->register($container->make(AssetAcquisitionHandler::class));
+        $this->register($container->make(DepreciationPostingHandler::class));
         $this->register($container->make(ProjectMilestoneCompletedHandler::class));
     }
 

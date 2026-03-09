@@ -28,6 +28,12 @@ return [
             'permission' => 'core-accounting.view',
             'children' => [
                 [
+                    'label' => 'Core Accounting Dashboard',
+                    'route' => 'core-accounting.index',
+                    'icon' => 'fas fa-home',
+                    'nav_key' => 'core_dashboard',
+                ],
+                [
                     'label' => 'Chart of Accounts',
                     'route' => 'core-accounting.accounts.index',
                     'icon' => 'fas fa-sitemap',
@@ -50,6 +56,12 @@ return [
                     'route' => 'core-accounting.periods.index',
                     'icon' => 'fas fa-calendar-alt',
                     'nav_key' => 'core_period_management',
+                ],
+                [
+                    'label' => 'Posting Rules',
+                    'route' => 'core-accounting.posting-rules.index',
+                    'icon' => 'fas fa-random',
+                    'nav_key' => 'core_posting_rules',
                 ],
             ],
         ],

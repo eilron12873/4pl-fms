@@ -3,6 +3,7 @@
 namespace App\Modules\CoreAccounting\Application;
 
 use App\Core\Services\AuditService;
+use App\Modules\CoreAccounting\Domain\Exceptions\JournalNotBalancedException;
 use App\Modules\CoreAccounting\Domain\Exceptions\JournalImmutableException;
 use App\Modules\CoreAccounting\Domain\Exceptions\PeriodLockedException;
 use App\Modules\CoreAccounting\Infrastructure\Models\Account;
@@ -151,7 +152,7 @@ class JournalService
             $totalCredit += (float) ($line['credit'] ?? 0);
         }
         if (round($totalDebit, 2) !== round($totalCredit, 2)) {
-            throw new InvalidArgumentException('Journal is not balanced (debit != credit).');
+            throw new JournalNotBalancedException('Journal is not balanced (debit != credit).');
         }
     }
 

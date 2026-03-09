@@ -2,6 +2,7 @@
 
 namespace App\Modules\CoreAccounting\Application\FinancialEvents;
 
+use App\Modules\CoreAccounting\Application\GLPostingEngine\GLPostingEngine;
 use App\Modules\CoreAccounting\Application\JournalService;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use Illuminate\Validation\ValidationException;
@@ -10,6 +11,7 @@ class ShipmentDeliveredHandler implements FinancialEventHandlerInterface
 {
     public function __construct(
         protected JournalService $journalService,
+        protected GLPostingEngine $glPostingEngine,
     ) {
     }
 
@@ -22,25 +24,32 @@ class ShipmentDeliveredHandler implements FinancialEventHandlerInterface
     {
         $this->validate($payload);
 
-        $amount = (float) $payload['amount'];
-        $lines = [
-            [
-                'account_code' => $payload['receivable_account_code'],
-                'debit' => $amount,
-                'credit' => 0,
-                'shipment_id' => $payload['shipment_id'] ?? null,
-                'client_id' => $payload['client_id'] ?? null,
-                'route_id' => $payload['route_id'] ?? null,
-            ],
-            [
-                'account_code' => $payload['revenue_account_code'],
-                'debit' => 0,
-                'credit' => $amount,
-                'shipment_id' => $payload['shipment_id'] ?? null,
-                'client_id' => $payload['client_id'] ?? null,
-                'route_id' => $payload['route_id'] ?? null,
-            ],
-        ];
+        $eventType = 'shipment-delivered';
+
+        $lines = $this->glPostingEngine->buildJournal($eventType, $payload);
+
+        // Fallback to existing hardcoded posting logic when no rule is configured.
+        if ($lines === null) {
+            $amount = (float) $payload['amount'];
+            $lines = [
+                [
+                    'account_code' => $payload['receivable_account_code'],
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'shipment_id' => $payload['shipment_id'] ?? null,
+                    'client_id' => $payload['client_id'] ?? null,
+                    'route_id' => $payload['route_id'] ?? null,
+                ],
+                [
+                    'account_code' => $payload['revenue_account_code'],
+                    'debit' => 0,
+                    'credit' => $amount,
+                    'shipment_id' => $payload['shipment_id'] ?? null,
+                    'client_id' => $payload['client_id'] ?? null,
+                    'route_id' => $payload['route_id'] ?? null,
+                ],
+            ];
+        }
 
         $journal = $this->journalService->post($lines, [
             'description' => $payload['description'] ?? 'Shipment delivered',
@@ -48,7 +57,7 @@ class ShipmentDeliveredHandler implements FinancialEventHandlerInterface
             'source_system' => $context['source_system'],
             'source_type' => $payload['source_type'] ?? 'shipment',
             'source_reference' => $context['source_reference'],
-            'event_type' => 'shipment-delivered',
+            'event_type' => $eventType,
             'idempotency_key' => $context['idempotency_key'],
             'payload' => $payload,
         ]);
