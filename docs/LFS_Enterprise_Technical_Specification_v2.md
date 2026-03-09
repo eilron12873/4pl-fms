@@ -86,6 +86,7 @@ SECTION 4 -- DOMAIN ARCHITECTURE
 8.  FixedAssets
 9.  Treasury
 10. FinancialReporting
+11. Procurement
 
 Each domain is implemented as a Laravel module with:
 
@@ -142,6 +143,7 @@ PODConfirmed - ProjectMilestoneCompleted
 -   Tax engine abstraction
 -   Credit/Debit note support
 -   AR Aging generation
+-   Manual AR entry screen (create/edit draft invoices before issue)
 
 ====================================================================
 SECTION 7 -- ACCOUNTS PAYABLE SPECIFICATION
@@ -158,6 +160,13 @@ SECTION 7 -- ACCOUNTS PAYABLE SPECIFICATION
 
 Shipment Delivered → Cost Accrual Journal Vendor Invoice Approved →
 Accrual Reversal + AP Posting
+
+7.3 AP Operational Workflows
+
+-   Manual AP bill entry (draft bills with editable header and lines, then issue)
+-   Vendor credit note support for adjustments and write-offs
+-   Voucher and check processing (payment vouchers, check printing, check register, amount-in-words, void workflow)
+-   Procurement integration: AP bills can be linked to Purchase Orders (including “Create bill from P.O.”) for basic 3-way match alignment
 
 ====================================================================
 SECTION 8 -- COSTING & PROFITABILITY ENGINE

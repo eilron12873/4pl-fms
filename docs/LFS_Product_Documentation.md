@@ -97,6 +97,7 @@ Elapsed - ASN Received - Project Milestone Completed
 -   AR Aging
 -   Collection tracking
 -   DSO reporting
+-   Manual AR entry: create and edit draft invoices, then issue when approved
 
 ------------------------------------------------------------------------
 
@@ -112,13 +113,15 @@ Supports:
 
 Features:
 
--   Vendor bill entry
+-   Manual vendor bill entry (draft bills with editable header/lines, then issue)
 -   Accrual posting
 -   Accrual reversal
 -   AP Aging
 -   Payment scheduling
 -   Multi-currency support
 -   Margin variance alerts
+-   AP payment vouchers and check register (check printing with amount-in-words, void workflow)
+-   PO-linked AP bills (create bill from approved/received P.O. and link for matching)
 
 ------------------------------------------------------------------------
 
@@ -182,6 +185,29 @@ Features:
 -   Maintenance cost integration
 -   Cost per KM analysis
 -   Asset profitability reporting
+
+------------------------------------------------------------------------
+
+## 3.7 Procurement (Purchase Requests & Purchase Orders)
+
+### Purchase Requests (P.R.)
+
+-   Create purchase requests with multi-line items (description, quantity, estimated cost, account)
+-   Status workflow: Draft → Submitted → Approved (with approval date)
+-   Visibility into requested-by, department, and notes for audit trail
+
+### Purchase Orders (P.O.)
+
+-   Create purchase orders from an approved P.R. or directly (standalone P.O.)
+-   Vendor, currency, order/expected dates, and total amount tracking
+-   Status workflow: Draft → Issued → Received (with received date)
+-   Line-level quantities, unit prices, and account coding
+
+### Integration with Accounts Payable
+
+-   “Create bill from P.O.” flow in AP to generate a draft vendor bill from an issued/received P.O.
+-   AP bill lines pre-filled from the P.O. lines (description and amounts)
+-   AP bills keep a link back to the originating P.O. for basic 3-way matching and audit
 
 ------------------------------------------------------------------------
 
