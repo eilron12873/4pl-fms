@@ -4,9 +4,16 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 {{ __('Account') }}: {{ $account->code }} — {{ $account->name }}
             </h2>
-            <a href="{{ route('core-accounting.accounts.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                {{ __('Back to Chart of Accounts') }}
-            </a>
+            <div class="flex items-center gap-2">
+                @can('core-accounting.manage')
+                    <a href="{{ route('core-accounting.accounts.edit', $account->id) }}" class="inline-flex items-center px-3 py-1.5 border text-sm font-medium rounded-md text-amber-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-amber-300 dark:border-amber-600">
+                        {{ __('Edit') }}
+                    </a>
+                @endcan
+                <a href="{{ route('core-accounting.accounts.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                    {{ __('Back to Chart of Accounts') }}
+                </a>
+            </div>
         </div>
     </x-slot>
 
@@ -29,6 +36,16 @@
                     <div>
                         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Posting') }}</dt>
                         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ $account->is_posting ? __('Yes') : __('No') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Status') }}</dt>
+                        <dd class="mt-1">
+                            @if($account->is_active ?? true)
+                                <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">{{ __('Active') }}</span>
+                            @else
+                                <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ __('Inactive') }}</span>
+                            @endif
+                        </dd>
                     </div>
                     @if($account->parent)
                         <div>

@@ -26,14 +26,13 @@
                         @endcan
                     </div>
                     @can('core-accounting.manage')
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ __('Bulk Import COA: Download the CSV template, fill in code, name, type, level, and posting (parent codes first), then upload your file.') }}
+                        </p>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('core-accounting.accounts.import.template') }}"
                                class="inline-flex items-center px-3 py-1.5 border text-sm font-medium rounded-md text-teal-700 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:text-teal-300 dark:border-teal-600">
                                 {{ __('Download CSV template') }}
-                            </a>
-                            <a href="{{ route('core-accounting.accounts.export') }}"
-                               class="inline-flex items-center px-3 py-1.5 border text-sm font-medium rounded-md text-teal-700 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:text-teal-300 dark:border-teal-600">
-                                {{ __('Export COA CSV') }}
                             </a>
                             <form action="{{ route('core-accounting.accounts.import') }}" method="POST" enctype="multipart/form-data" class="inline-flex items-center gap-2">
                                 @csrf
@@ -102,7 +101,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">{{ __('No accounts found. Run ChartOfAccountsSeeder.') }}</td>
+                                    <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">{{ __('No accounts found. Create an account or import from CSV.') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -113,6 +112,14 @@
                         {{ $accounts->links() }}
                     </div>
                 @endif
+                @can('core-accounting.manage')
+                    <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                        <a href="{{ route('core-accounting.accounts.export') }}"
+                           class="inline-flex items-center px-3 py-1.5 border text-sm font-medium rounded-md text-teal-700 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:text-teal-300 dark:border-teal-600">
+                            {{ __('Export COA CSV') }}
+                        </a>
+                    </div>
+                @endcan
             </div>
         </div>
     </div>
