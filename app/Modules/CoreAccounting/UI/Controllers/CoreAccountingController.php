@@ -6,6 +6,7 @@ use App\Core\Services\AuditService;
 use App\Http\Controllers\Controller;
 use App\Modules\CoreAccounting\Application\CoreAccountingOverview;
 use App\Modules\CoreAccounting\Infrastructure\Models\Account;
+use App\Modules\CoreAccounting\Infrastructure\Models\AccountImportLog;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingRule;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingSource;
@@ -43,6 +44,391 @@ class CoreAccountingController extends Controller
     {
         $account = Account::with('parent', 'children')->findOrFail($id);
         return view('core-accounting::accounts.show', compact('account'));
+    }
+
+    public function accountsCreate(): View
+    {
+        $this->authorize('core-accounting.manage');
+        $account = new Account(['is_posting' => true, 'is_active' => true]);
+        $parentOptions = Account::orderBy('code')->get();
+
+        return view('core-accounting::accounts.form', [
+            'account' => $account,
+            'parentOptions' => $parentOptions,
+            'mode' => 'create',
+        ]);
+    }
+
+    public function accountsStore(Request $request): RedirectResponse
+    {
+        $this->authorize('core-accounting.manage');
+
+        $data = $this->validateAccount($request);
+
+        $account = Account::create([
+            'code' => $data['code'],
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'parent_id' => $data['parent_id'] ?? null,
+            'level' => $data['level'] ?? 2,
+            'is_posting' => $data['is_posting'] ?? false,
+            'is_active' => $data['is_active'] ?? false,
+        ]);
+
+        return redirect()
+            ->route('core-accounting.accounts.show', $account->id)
+            ->with('success', __('Account created.'));
+    }
+
+    public function accountsEdit(int $id): View
+    {
+        $this->authorize('core-accounting.manage');
+        $account = Account::with('parent')->findOrFail($id);
+        $parentOptions = Account::where('id', '!=', $account->id)->orderBy('code')->get();
+
+        return view('core-accounting::accounts.form', [
+            'account' => $account,
+            'parentOptions' => $parentOptions,
+            'mode' => 'edit',
+        ]);
+    }
+
+    public function accountsUpdate(Request $request, int $id): RedirectResponse
+    {
+        $this->authorize('core-accounting.manage');
+        $account = Account::findOrFail($id);
+
+        $data = $this->validateAccount($request, $account->id);
+
+        $account->update([
+            // code is intentionally immutable to avoid breaking mappings
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'parent_id' => $data['parent_id'] ?? null,
+            'level' => $data['level'] ?? $account->level,
+            'is_posting' => $data['is_posting'] ?? false,
+            'is_active' => $data['is_active'] ?? false,
+        ]);
+
+        return redirect()
+            ->route('core-accounting.accounts.show', $account->id)
+            ->with('success', __('Account updated.'));
+    }
+
+    public function accountsDeactivate(Request $request, int $id): RedirectResponse
+    {
+        $this->authorize('core-accounting.manage');
+        $account = Account::findOrFail($id);
+
+        $account->update(['is_active' => false]);
+
+        return redirect()
+            ->route('core-accounting.accounts.index')
+            ->with('success', __('Account deactivated. It will no longer be used for new postings.'));
+    }
+
+    public function accountsImportTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $this->authorize('core-accounting.manage');
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="lfs_chart_of_accounts_template.csv"',
+        ];
+
+        $callback = function () {
+            $output = fopen('php://output', 'w');
+            // Header row
+            fputcsv($output, ['code', 'name', 'type', 'parent_code', 'level', 'is_posting', 'is_active']);
+            // Example rows
+            fputcsv($output, ['4100', 'Warehousing Revenue', 'revenue', '', '2', '1', '1']);
+            fputcsv($output, ['4110', 'Pallet Storage Revenue', 'revenue', '4100', '3', '1', '1']);
+            fclose($output);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function accountsImport(Request $request): RedirectResponse
+    {
+        $this->authorize('core-accounting.manage');
+
+        $request->validate([
+            'accounts_csv' => ['required', 'file', 'mimes:csv,txt'],
+        ]);
+
+        $file = $request->file('accounts_csv');
+        $contents = (string) file_get_contents($file->getRealPath());
+        $hash = hash('sha256', $contents);
+
+        // Prevent duplicate import of the same file
+        if (AccountImportLog::where('file_hash', $hash)->exists()) {
+            return redirect()
+                ->route('core-accounting.accounts.index')
+                ->with('error', __('This file has already been imported.'));
+        }
+
+        $rows = [];
+        $handle = fopen($file->getRealPath(), 'r');
+        if ($handle === false) {
+            return redirect()
+                ->route('core-accounting.accounts.index')
+                ->with('error', __('Unable to read uploaded file.'));
+        }
+
+        $header = fgetcsv($handle);
+        if (! $header) {
+            fclose($handle);
+            return redirect()
+                ->route('core-accounting.accounts.index')
+                ->with('error', __('CSV file is empty or invalid.'));
+        }
+
+        $normalizedHeader = array_map('strtolower', $header);
+        $requiredColumns = ['code', 'name', 'type'];
+        foreach ($requiredColumns as $col) {
+            if (! in_array($col, $normalizedHeader, true)) {
+                fclose($handle);
+                return redirect()
+                    ->route('core-accounting.accounts.index')
+                    ->with('error', __('CSV must contain columns: :cols', ['cols' => implode(', ', $requiredColumns)]));
+            }
+        }
+
+        while (($data = fgetcsv($handle)) !== false) {
+            if (count(array_filter($data, fn ($v) => $v !== null && $v !== '')) === 0) {
+                continue;
+            }
+            $row = array_combine($normalizedHeader, $data);
+            if ($row !== false) {
+                $rows[] = $row;
+            }
+        }
+        fclose($handle);
+
+        if (empty($rows)) {
+            return redirect()
+                ->route('core-accounting.accounts.index')
+                ->with('error', __('No data rows found in CSV.'));
+        }
+
+        // Validation: duplicates, types, parents, and cycle prevention
+        $errors = [];
+        $seenCodes = [];
+        $validTypes = ['asset', 'liability', 'equity', 'revenue', 'expense'];
+
+        foreach ($rows as $index => $row) {
+            $line = $index + 2; // account for header
+            $code = trim((string) ($row['code'] ?? ''));
+            $name = trim((string) ($row['name'] ?? ''));
+            $type = strtolower(trim((string) ($row['type'] ?? '')));
+            $parentCode = trim((string) ($row['parent_code'] ?? ''));
+
+            if ($code === '' || $name === '' || $type === '') {
+                $errors[] = "Line {$line}: code, name and type are required.";
+                continue;
+            }
+            if (isset($seenCodes[$code])) {
+                $errors[] = "Line {$line}: duplicate code '{$code}' within file.";
+            } else {
+                $seenCodes[$code] = true;
+            }
+            if (! in_array($type, $validTypes, true)) {
+                $errors[] = "Line {$line}: invalid account type '{$type}'.";
+            }
+            if ($parentCode !== '' && $parentCode === $code) {
+                $errors[] = "Line {$line}: parent_code cannot be the same as code.";
+            }
+        }
+
+        if (! empty($errors)) {
+            return redirect()
+                ->route('core-accounting.accounts.index')
+                ->with('error', implode(' ', $errors));
+        }
+
+        // Build in-memory map of all prospective accounts (existing + new)
+        $allAccountsByCode = Account::query()
+            ->get()
+            ->keyBy('code')
+            ->toArray();
+
+        foreach ($rows as $row) {
+            $code = trim((string) $row['code']);
+            if (! isset($allAccountsByCode[$code])) {
+                $allAccountsByCode[$code] = [
+                    'code' => $code,
+                    'name' => trim((string) $row['name']),
+                    'type' => strtolower(trim((string) $row['type'])),
+                    'parent_code' => trim((string) ($row['parent_code'] ?? '')),
+                    'level' => (int) ($row['level'] ?? 2),
+                    'is_posting' => ! empty($row['is_posting']),
+                    'is_active' => ! array_key_exists('is_active', $row) || ! in_array(strtolower((string) $row['is_active']), ['0', 'false', 'no'], true),
+                ];
+            }
+        }
+
+        // Cycle detection for parent relationships using DFS
+        $graph = [];
+        foreach ($allAccountsByCode as $code => $data) {
+            $parentCode = $data['parent_code'] ?? '';
+            if ($parentCode !== '' && isset($allAccountsByCode[$parentCode])) {
+                $graph[$code] = $parentCode;
+            }
+        }
+
+        $visiting = [];
+        $visited = [];
+        $cycleFound = false;
+
+        $dfs = function (string $code) use (&$dfs, &$graph, &$visiting, &$visited, &$cycleFound): void {
+            if ($cycleFound) {
+                return;
+            }
+            if (isset($visiting[$code])) {
+                $cycleFound = true;
+                return;
+            }
+            if (isset($visited[$code])) {
+                return;
+            }
+            $visiting[$code] = true;
+            if (isset($graph[$code])) {
+                $dfs($graph[$code]);
+            }
+            unset($visiting[$code]);
+            $visited[$code] = true;
+        };
+
+        foreach (array_keys($allAccountsByCode) as $code) {
+            $dfs($code);
+            if ($cycleFound) {
+                break;
+            }
+        }
+
+        if ($cycleFound) {
+            return redirect()
+                ->route('core-accounting.accounts.index')
+                ->with('error', __('Import aborted: detected a cycle in parent/child account relationships.'));
+        }
+
+        // Create accounts in parent-first order
+        $created = 0;
+        foreach ($rows as $row) {
+            $code = trim((string) $row['code']);
+            $name = trim((string) $row['name']);
+            $type = strtolower(trim((string) $row['type']));
+            $parentCode = trim((string) ($row['parent_code'] ?? ''));
+            $level = (int) ($row['level'] ?? 2);
+            $isPosting = ! empty($row['is_posting']);
+            $isActive = ! array_key_exists('is_active', $row) || ! in_array(strtolower((string) $row['is_active']), ['0', 'false', 'no'], true);
+
+            if (Account::where('code', $code)->exists()) {
+                continue;
+            }
+
+            $parentId = null;
+            if ($parentCode !== '') {
+                $parent = Account::where('code', $parentCode)->first();
+                if (! $parent) {
+                    // Create parent skeleton if it was also in the file and not yet saved
+                    if (isset($allAccountsByCode[$parentCode])) {
+                        $parent = Account::firstOrCreate(
+                            ['code' => $parentCode],
+                            [
+                                'name' => $allAccountsByCode[$parentCode]['name'],
+                                'type' => $allAccountsByCode[$parentCode]['type'],
+                                'level' => $allAccountsByCode[$parentCode]['level'],
+                                'is_posting' => $allAccountsByCode[$parentCode]['is_posting'],
+                                'is_active' => $allAccountsByCode[$parentCode]['is_active'],
+                            ],
+                        );
+                    }
+                }
+                $parentId = $parent?->id;
+            }
+
+            Account::create([
+                'code' => $code,
+                'name' => $name,
+                'type' => $type,
+                'parent_id' => $parentId,
+                'level' => $level,
+                'is_posting' => $isPosting,
+                'is_active' => $isActive,
+            ]);
+
+            $created++;
+        }
+
+        AccountImportLog::create([
+            'file_hash' => $hash,
+            'original_name' => $file->getClientOriginalName(),
+            'user_id' => $request->user()?->id,
+            'rows_imported' => $created,
+        ]);
+
+        return redirect()
+            ->route('core-accounting.accounts.index')
+            ->with('success', __('Accounts imported: :count new accounts created.', ['count' => $created]));
+    }
+
+    public function accountsExport(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $this->authorize('core-accounting.view');
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="lfs_chart_of_accounts_export.csv"',
+        ];
+
+        $callback = function () {
+            $output = fopen('php://output', 'w');
+            // Header row consistent with import template
+            fputcsv($output, ['code', 'name', 'type', 'parent_code', 'level', 'is_posting', 'is_active']);
+
+            Account::with('parent')
+                ->orderBy('code')
+                ->chunk(200, function ($chunk) use ($output) {
+                    foreach ($chunk as $account) {
+                        fputcsv($output, [
+                            $account->code,
+                            $account->name,
+                            $account->type,
+                            $account->parent?->code,
+                            $account->level,
+                            $account->is_posting ? 1 : 0,
+                            ($account->is_active ?? true) ? 1 : 0,
+                        ]);
+                    }
+                });
+
+            fclose($output);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validateAccount(Request $request, ?int $accountId = null): array
+    {
+        $uniqueCode = 'unique:accounts,code';
+        if ($accountId) {
+            $uniqueCode .= ',' . $accountId;
+        }
+
+        return $request->validate([
+            'code' => $accountId ? ['required', 'string', 'max:50'] : ['required', 'string', 'max:50', $uniqueCode],
+            'name' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'in:asset,liability,equity,revenue,expense'],
+            'parent_id' => ['nullable', 'integer', 'exists:accounts,id'],
+            'level' => ['nullable', 'integer', 'min:1', 'max:9'],
+            'is_posting' => ['sometimes', 'boolean'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
     }
 
     public function journals(): View

@@ -15,6 +15,12 @@ class Account extends Model
         'parent_id',
         'level',
         'is_posting',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_posting' => 'bool',
+        'is_active' => 'bool',
     ];
 
     public function parent(): BelongsTo

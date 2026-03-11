@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('parent_id')->nullable()->constrained('accounts');
             $table->unsignedTinyInteger('level')->default(1);
             $table->boolean('is_posting')->default(true);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }
