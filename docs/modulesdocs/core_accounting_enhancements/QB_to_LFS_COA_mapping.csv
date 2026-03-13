@@ -1,0 +1,239 @@
+QB_Number,QB_Name,QB_AccountType,QB_DetailType,LFS_AccountCode,LFS_AccountName,Mapping_Notes
+101002,CIB - UCPB Baclaran (SA#20147-000623-6),Cash at bank and in hand,Current,1020,Bank Account,Map all operating bank accounts to generic bank account; consider subaccounts per bank in LFS if needed
+101005,CIB - DBP Pasay (CA#0-50006-495-1),Cash at bank and in hand,Current,1020,Bank Account,Same as above
+101006,CIB - BDO Airport Road Branch (SA#000498017803)),Cash at bank and in hand,Current,1020,Bank Account,Same as above
+101008,CIB - BDO Airport Road Branch (SA#000498016106),Cash at bank and in hand,Current,1020,Bank Account,Same as above
+101010,CIB - Philippine Business Bank Malibay Branch,Cash at bank and in hand,Current,1020,Bank Account,Same as above
+101011,CIB - DBP Pasay (Egov account),Cash at bank and in hand,Current,1020,Bank Account,Same as above
+101016,BDO Cebu Current # 010328004651,Cash at bank and in hand,Cash on hand,1020,Bank Account,Still a bank account; treat as current account
+101017,CIB - EastWest Bank (200040461522),Cash at bank and in hand,Current,1020,Bank Account,
+101018,CIB - BDO (490364799),Cash at bank and in hand,Cash on hand,1020,Bank Account,
+101019,CIB AllBank (SA# 007-10-00225-8),Cash at bank and in hand,Cash on hand,1020,Bank Account,
+101020,CIB AllBank (CA# 007-21-00062-8),Cash at bank and in hand,Current,1020,Bank Account,
+101021,CIB MetroBank (606-3-60657519-0),Cash at bank and in hand,Cash on hand,1020,Bank Account,
+101022,BDO Cebu Current 2 #010328007138,Cash at bank and in hand,Current,1020,Bank Account,
+102001,Accounts Receivable,Debtors,Debtors,1100,Accounts Receivable,Map to generic AR control
+101001,Petty Cash Fund / Revolving Fund,Current assets,Allowance for bad debts,1030,Petty Cash,Map petty cash funds
+102002,Allowance for Doubtful Accounts,Current assets,Allowance for bad debts,,,"Create specific LFS account (e.g. 1140 Allowance for Doubtful Accounts) under Assets; link as contra-AR"
+102003,Accrued Revenue - VISMIN,Current assets,Other current assets,1130,Accrued Revenue,Regional detail via dimension; keep LFS generic accrued revenue
+102007,Accounts Receivables - Affiliates,Current assets,Loans to Others,1110,Trade Receivables,Use dimension client_type=affiliate to distinguish
+103001,Operating Supplies Inventory,Current assets,Stock,1210,Warehouse Inventory,Map to warehouse inventory; use cost_center/warehouse for detail
+103002,Office Supplies Inventory,Current assets,Stock,1220,Packaging Materials,Or create 1225 Office Supplies Inventory if needed
+104001,Advances to Officers and Employees - Personal,Current assets,Current,1300,Prepaid Expenses,More precisely “Advances”; consider new 1310 Advances to Employees
+104002,Advances to Officers and Employees - Official (for liquidation),Current assets,Current,1300,Prepaid Expenses,Same note as above
+106001,Accounts Receivable - Others,Current assets,Undeposited Funds,1110,Trade Receivables,Use dimension/type to classify “others”
+108001,Prepaid Insurance,Current assets,Allowance for bad debts,1300,Prepaid Expenses,Prepaid expense; consider subaccount “Prepaid Insurance”
+108003,Prepaid Rent,Current assets,Prepaid Expenses,1300,Prepaid Expenses,Consider subaccount “Prepaid Rent”
+108004,Prepaid Expense - Others,Current assets,Prepaid Expenses,1300,Prepaid Expenses,
+108005,Prior Years Excess Credits,Current assets,Prepaid Expenses,1300,Prepaid Expenses,Tax-related credit; document in tax notes
+109001,Prepaid Income Tax,Current assets,Other current assets,1300,Prepaid Expenses,Tax asset; extend tax pack later
+109002,Input VAT - Local Purchases,Current assets,Allowance for bad debts,1300,Prepaid Expenses,Use dedicated VAT input asset accounts when LFS tax module is extended
+109003,Input VAT - Services,Current assets,Allowance for bad debts,1300,Prepaid Expenses,Same note as above
+109005,Prepaid Income Tax (VISMIN),Current assets,Allowance for bad debts,1300,Prepaid Expenses,Use region dimension for VISMIN
+109006,Input VAT - Local Purchases (VISMIN),Current assets,Allowance for bad debts,1300,Prepaid Expenses,Region via dimension
+109007,Input VAT - Services (VISMIN),Current assets,Allowance for bad debts,1300,Prepaid Expenses,Region via dimension
+109010,Excess Input VAT Carry Over,Current assets,Allowance for bad debts,1300,Prepaid Expenses,Tax asset; may warrant dedicated LFS account
+,Stock Asset,Current assets,Stock,1210,Warehouse Inventory,Generic stock asset; refine via dimensions
+111101,Construction In Progress,Tangible assets,Other Tangible Assets,1550,Warehouse Equipment,Or create dedicated 1570 Construction in Progress under fixed assets
+111201,Buildings,Tangible assets,Buildings,,,"Extend LFS fixed assets with specific Buildings account (e.g. 1571 Buildings)"
+111202,Accumulated Depreciation - Buildings,Tangible assets,Accumulated Depreciation,1620,Accumulated Depreciation -- Equipment,Prefer new 1615 Accumulated Depreciation - Buildings
+111203,Building Improvements,Tangible assets,Buildings,,,"Extend LFS with Building Improvements fixed asset account"
+111204,Accumulated Depreciation - Building Improvements,Tangible assets,Accumulated Depreciation,1620,Accumulated Depreciation -- Equipment,Prefer new 1616 Accumulated Depreciation - Building Improvements
+111205,Leasehold Improvements,Tangible assets,Leasehold Improvements,,,"Extend LFS fixed assets with Leasehold Improvements"
+111206,Accumulated Depreciation - Leasehold Improvements,Tangible assets,Accumulated Depreciation,1620,Accumulated Depreciation -- Equipment,Prefer a dedicated leasehold improvements depreciation account
+111401,Transportation & Delivery Equipment,Tangible assets,Machinery and equipment,1510,Trucks,Use additional dimensions to distinguish non-truck equipment or extend asset list
+111402,Accumulated Depreciation - Transportation & Delivery Equipment,Tangible assets,Accumulated Depreciation,1610,Accumulated Depreciation -- Trucks,
+111403,Linehaul & Warehousing Equipment,Tangible assets,Machinery and equipment,1550,Warehouse Equipment,Could split linehaul vs warehouse via cost_center
+111404,Accumulated Depreciation - Linehaul & Warehousing Equipment,Tangible assets,Accumulated Depreciation,1620,Accumulated Depreciation -- Equipment,
+111501,Furniture and Fixtures,Tangible assets,Furniture and Fixtures,,,"Extend LFS fixed assets (e.g. 1555 Furniture and Fixtures)"
+111502,Accumulated Depreciation - Furniture and Fixtures,Tangible assets,Accumulated Depreciation,1620,Accumulated Depreciation -- Equipment,Prefer dedicated accumulated depreciation account
+111503,Data Processing Equipment - Hardware,Tangible assets,Machinery and equipment,1560,IT Equipment,Map all IT hardware here
+111504,Accumulated Depreciation - Data Processing Equipment (Hardware),Tangible assets,Accumulated Depreciation,1620,Accumulated Depreciation -- Equipment,
+111505,Data Processing Equipment - Software,Tangible assets,Machinery and equipment,1560,IT Equipment,May later separate software vs hardware
+111506,Accumulated Depreciation - Data Processing Equipment (Software),Tangible assets,Accumulated Amortisation,1620,Accumulated Depreciation -- Equipment,Functionally amortisation of intangibles; keep in accumulated dep group
+111601,Long-term Investments,Tangible assets,Other Tangible Assets,,,"Extend LFS assets for Long-term Investments if required"
+106003,Advances for SSS Benefits,Non-current assets,Accumulated amortisation of non-current assets,,,"Create dedicated long-term advances account under assets"
+106004,Security / Cash Deposits,Non-current assets,Accumulated amortisation of non-current assets,,,"Create non-current deposits account under assets"
+110003,Advances to Affiliates,Non-current assets,Accumulated amortisation of non-current assets,,,"Create non-current receivables to affiliates"
+110004,Deferred Charges,Non-current assets,Other Non-current Assets,,,"Create deferred charges / other non-current asset account"
+201001,Accounts Payable,Creditors,Creditors,2010,Accounts Payable,Map to generic AP
+202001,HDMF Premium Payable,Current liabilities,Payroll Clearing,2070,Taxes Payable,Statutory payroll liability; consider dedicated payroll liabilities group
+202002,HDMF Loans Payable,Current liabilities,Payroll Clearing,2070,Taxes Payable,Same statutory category
+202003,HDMF Housing Loans Payable,Current liabilities,Payroll Clearing,2070,Taxes Payable,
+202004,SSS Premium Payable,Current liabilities,Payroll Clearing,2070,Taxes Payable,
+202005,SSS Loans Payable,Current liabilities,Loan Payable,2070,Taxes Payable,Could alternatively use loan payable under 2000
+202006,PhilHealth Premium Payable,Current liabilities,Payroll Clearing,2070,Taxes Payable,
+203001,Income Tax Payable,Current liabilities,Current Tax Liability,2070,Taxes Payable,Generic taxes payable
+203002,Output VAT,Current liabilities,VAT Payable,2070,Taxes Payable,Future LFS VAT liability account
+203003,Withholding Tax - Compensation,Current liabilities,Current Tax Liability,2070,Taxes Payable,
+203004,Withholding Tax - Expanded,Current liabilities,Current Tax Liability,2070,Taxes Payable,
+203005,Withholding Tax - Final,Current liabilities,Current Tax Liability,2070,Taxes Payable,
+203006,Output VAT (VISMIN),Current liabilities,VAT Payable,2070,Taxes Payable,Region via dimension
+203007,Withholding Tax Expanded VISMIN,Current liabilities,Current Tax Liability,2070,Taxes Payable,Region via dimension
+203008,VAT Payable,Current liabilities,VAT Payable,2070,Taxes Payable,
+203009,VAT Payable (VISMIN),Current liabilities,Current Tax Liability,2070,Taxes Payable,Region via dimension
+204001,Accrued Expenses Payable,Current liabilities,Current Liabilities,2030,Accrued Expenses,Map to generic accrued expenses
+204003,Accrued Interest Payable,Current liabilities,Current Liabilities,2030,Accrued Expenses,Consider future specific accrued interest account
+204004,Accrued Payroll,Current liabilities,Payroll Clearing,2060,Payroll Payable,Maps to payroll payable
+204005,Accrued Output VAT,Current liabilities,VAT Payable,2070,Taxes Payable,
+204006,Accrued Output VAT (VISMIN),Current liabilities,VAT Payable,2070,Taxes Payable,Region via dimension
+204007,Accrued Retirement,Current liabilities,Payroll Clearing,2030,Accrued Expenses,Provision for retirement under accrued expenses
+204008,Accrued Expenses Payable (VISMIN),Current liabilities,Prepaid Expenses Payable,2030,Accrued Expenses,Region via dimension
+204009,Accrued Interest Payable - VISMIN,Current liabilities,Short term borrowings from related parties,2030,Accrued Expenses,Region via dimension
+205001,Loans Payable - Peso (Long Term),Current liabilities,Loan Payable,2210,Bank Loans,Map to long-term loans
+205003,Loans Payable - Peso (Short Term),Current liabilities,Loan Payable,2210,Bank Loans,Use maturity date to classify; LFS treats generically
+205004,Accounts Payable - Others,Current liabilities,Current Liabilities,2020,Vendor Payables,Use vendor dimension to classify “others”
+205005,Loans Payable - Peso (Short term) - Vismin,Current liabilities,Loan Payable,2210,Bank Loans,Region via dimension
+,Input VAT 12% Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,Future dedicated VAT suspense account
+,Input VAT12 - Local Purchase Control,Current liabilities,VAT Payable,2070,Taxes Payable,
+,Input VAT12 - Local Purchase Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Input VAT12 - Services (VISMIN) Control,Current liabilities,VAT Payable,2070,Taxes Payable,
+,Input VAT12 - Services (VISMIN) Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Input VAT12- Local Purchases - VISMIN Control,Current liabilities,VAT Payable,2070,Taxes Payable,
+,Input VAT12- Local Purchases - VISMIN Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Input VAT12- Local Purchases Control,Current liabilities,VAT Payable,2070,Taxes Payable,
+,Input VAT12- Local Purchases Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Output Vat 12% Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Output Tax - 12% Sales Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Output Tax 12 % Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Output VAT (VISMIN) 1,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,Output VAT12 - Service Control,Current liabilities,VAT Payable,2070,Taxes Payable,
+,Output VAT12 - Service Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+,VAT Control,Current liabilities,VAT Payable,2070,Taxes Payable,
+,VAT Suspense,Current liabilities,VAT Suspense,2070,Taxes Payable,
+206001,Dividends Payable,Non-current liabilities,Other non-current liabilities,2200,Long-Term Liabilities,Use specific dividends payable account when extending LFS
+206003,Advances from Stockholders,Non-current liabilities,Other non-current liabilities,2200,Long-Term Liabilities,Or dedicated shareholder loans
+206006,Advances from Customers,Non-current liabilities,Other non-current liabilities,2000,Current Liabilities,Better as current liability; may need dedicated advances from customers account
+207001,Deferred Income Tax Liability,Non-current liabilities,Other non-current liabilities,2200,Long-Term Liabilities,Future specific deferred tax liability account
+207002,MCIT Payable,Non-current liabilities,Other non-current liabilities,2070,Taxes Payable,Tax liability; use tax dimension/type
+301001,Authorized Capital Stock,Equity,Owner's Equity,3000,Share Capital,Map equity capital
+301002,Unissued Capital Stock,Equity,Called up share capital,3000,Share Capital,Track via equity subledger; same group in LFS
+301003,Stock Subscription Receivable,Equity,Called up share capital,3000,Share Capital,Equity-related receivable; treat carefully in reporting
+301004,Paid-In Capital in Excess of PAR,Equity,Paid-in capital or surplus,3000,Share Capital,Additional paid-in capital; keep as equity dimension
+301005,Treasury Stocks,Equity,Treasury Shares,3000,Share Capital,Use equity dimension/type = treasury
+301006,Deposit for Future Subscription,Equity,Ordinary shares,3000,Share Capital,Equity-related deposit; keep under equity
+301007,Subscribed Capital Stock,Equity,Paid-in capital or surplus,3000,Share Capital,Subscribed but unpaid capital
+302001,RETAINED EARNINGS,Equity,Retained Earnings,3100,Retained Earnings,Map to retained earnings
+,Opening Balance Equity,Equity,Opening Balance Equity,3200,Current Year Earnings,Use for migration; zero out once balances moved
+401001,Distribution,Income,Service/Fee Income,4200,Transportation Revenue,Map distribution services to transport revenue
+401002,Warehousing,Income,Service/Fee Income,4100,Warehousing Revenue,
+401002-1,FSS Systems Inc.,Income,Service/Fee Income,4100,Warehousing Revenue,Use client_id dimension for FSS instead of separate GL
+401003,Car Carier,Income,Service/Fee Income,4210,Domestic Transport Revenue,Car carrier as transport revenue
+401004,Project Logistics,Income,Service/Fee Income,4300,Project Logistics Revenue,
+401005,Other Income,Income,Other Primary Income,7000,Other Income,Non-core income
+401006,Special Projects,Income,Service/Fee Income,4320,Special Handling Revenue,If special projects are logistics; adjust if not
+401007,Walk-in Income,Income,Service/Fee Income,4400,Value Added Services,Or generic logistics revenue; refine via service_line dimension
+401008,Rental Income,Income,Service/Fee Income,7000,Other Income,Classify as other income unless part of logistics service
+401009,Containerized,Income,Service/Fee Income,4200,Transportation Revenue,Containerized transport revenue
+,Billable Expense Income,Income,Other Primary Income,4400,Value Added Services,Or 7000 Other Income; depends on policy
+,Sales of Product Income,Income,Sales of Product Income,4000,Revenue,If product sales are minor; consider separate 4500 Product Sales group
+,Shipping Income,Income,Other Primary Income,4200,Transportation Revenue,
+,Unapplied Cash Payment Income,Income,Unapplied Cash Payment Income,7000,Other Income,Technical/unapplied cash; treat via clearing processes
+,Uncategorised Income,Income,Other Primary Income,7000,Other Income,Map to other income; avoid in steady-state
+,Uncategorized Income,Income,Other Primary Income,7000,Other Income,Same as above
+501001,Distribution COS,Cost of sales,Cost of Sales,5100,Transport Costs,Use service_line dimension “distribution”
+501002,Warehousing COS,Cost of sales,Cost of Sales,5200,Warehouse Operating Costs,
+501003,Car Carrier COS,Cost of sales,Cost of Sales,5100,Transport Costs,Service_line “car_carrier”
+501004,Project Logistics COS,Cost of sales,Cost of Sales,5300,Handling Costs,Or 5100/5200 mix depending on nature
+501005,Direct and Operating Expenses,Cost of sales,Supplies and materials - COS,5310,Packaging Materials,Generic direct COS; refine via nature dimensions
+501006,Special Project - COS,Cost of sales,Cost of Labour - COS,5320,Handling Labor,Special project labor COS
+810001,OP - Fuel,Cost of sales,Cost of Sales,5110,Fuel Expense,Transport fuel
+810002,OP - Toll Fee,Cost of sales,Cost of Sales,5120,Toll Fees,
+810003,OP - Terminal Fee,Cost of sales,Cost of Sales,5100,Transport Costs,Could create dedicated terminal fee subaccount
+810009,OP - Salaries and Wages Expense,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,Or 5320 if handling; use cost_center
+810010,OP - Overtime Pay,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,Part of direct labor
+810011,OP - SSS/EC Premium Expense,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,Employee costs; may split benefits later
+810012,OP - HDMF Premium Expense,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,
+810013,OP - PhilHealth Premium Expense,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,
+810014,OP - Bonus / 13th Month,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,
+810015,OP - Salaries and Wages Expense (VL/SL),Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,
+810016,OP - Other Employee Benefits / Employee Relations,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,
+810017,OP - Meals and Subsistence,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,Can separate as employee benefits via additional account later
+810018,OP - Parking Fee,Cost of sales,Cost of Sales,5100,Transport Costs,Parking as transport cost
+810019,OP - Commission,Cost of sales,Cost of Sales,5100,Transport Costs,Could move to operating expenses if not direct
+810020,"OP - Shipping, Freight and Delivery",Cost of sales,"Shipping, Freight and Delivery - COS",5100,Transport Costs,Direct shipping freight and delivery
+810021,OP - Accomodation,Cost of sales,Other costs of sales - COS,5100,Transport Costs,Alternatively travel expense if not direct COS
+810022,OP - Rental,Cost of sales,Cost of Sales,5200,Warehouse Operating Costs,If warehouse-related; otherwise operating expense
+810023,OP - Retirement Contributions,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,
+810024,OP - R & M - Auto,Cost of sales,Cost of Sales,5100,Transport Costs,Could have dedicated transport R&M account
+810025,OP - R & M - Office,Cost of sales,Cost of Sales,5200,Warehouse Operating Costs,If directly tied to operations
+810026,OP - R & M - Warehouse,Cost of sales,Cost of Sales,5200,Warehouse Operating Costs,
+810027,OP - Communication Expense - Telephone,Cost of sales,Cost of Sales,5200,Warehouse Operating Costs,Or move to 6000 operating expenses depending on policy
+810028,OP - Contractual Services,Cost of sales,Cost of Labour - COS,5210,Warehouse Labor,Contract labor
+810029,OP - Transpo - Auto Expense (Gas and Oil),Cost of sales,Cost of Sales,5110,Fuel Expense,Transport fuel
+810030,OP - Communication Expense - Mobile,Cost of sales,Cost of Sales,5200,Warehouse Operating Costs,Or move to 6000 communication
+810031,OP - Hazard Pay,Cost of sales,Cost of Sales,5210,Warehouse Labor,
+810033,OP - Subscription,Cost of sales,Other costs of sales - COS,5200,Warehouse Operating Costs,If directly tied to operations; else 6310 IT subscriptions
+810034,OP - Insurance,Cost of sales,Other costs of sales - COS,5200,Warehouse Operating Costs,If insuring operations; else 606002 Insurance - Non Life
+,Cost of sales,Cost of sales,Supplies and materials - COS,5310,Packaging Materials,Generic COS; avoid long-term
+,Inventory Shrinkage,Cost of sales,Supplies and materials - COS,5310,Packaging Materials,Could create dedicated inventory shrinkage account under COS
+601001,Salaries and Wages Expense,Expenses,Payroll Expenses,6100,Salaries and Wages,Administrative salaries
+601002,Overtime Pay,Expenses,Payroll Expenses,6100,Salaries and Wages,
+601003,SSS/EC Premium Expense,Expenses,Taxes Paid,6100,Salaries and Wages,Employee benefits; could be separated
+601004,HDMF Premium Expense,Expenses,Taxes Paid,6100,Salaries and Wages,
+601005,PhilHealth Premium Expense,Expenses,Taxes Paid,6100,Salaries and Wages,
+601006,Bonus / 13th Month,Expenses,Payroll Expenses,6100,Salaries and Wages,
+601007,Salaries and Wages Expense (VL/SL),Expenses,Payroll Expenses,6100,Salaries and Wages,
+601008,Other Employee Benefits / Employee Relations,Expenses,Payroll Expenses,6100,Salaries and Wages,
+601009,Meals and Subsistence,Expenses,Meals and entertainment,6100,Salaries and Wages,Could alternatively treat as staff welfare expense
+601010,Retirement Contributions,Expenses,Payroll Expenses,6100,Salaries and Wages,
+601011,Hazard Pay,Expenses,Payroll Expenses,6100,Salaries and Wages,
+602001,Postal/Courier Expense,Expenses,"Shipping, Freight, and Delivery",6200,Office Expenses,Or 5100 if directly attributable to shipments
+602002,Communication Expense - Telephone,Expenses,Office/General Administrative Expenses,6220,Internet and Communication,
+602003,Communication Expense - Mobile,Expenses,Office/General Administrative Expenses,6220,Internet and Communication,
+602004,Communication Expense - Internet / broadband,Expenses,Office/General Administrative Expenses,6220,Internet and Communication,
+603001,Transpo - Auto Expense (Gas and Oil),Expenses,Travel,6200,Office Expenses,If admin; map to 5110 if operational
+603002,"Transpo - Others (Parking fees, toll fees, PUV fares)",Expenses,Travel,6200,Office Expenses,Or 5110/5120 if direct to operations
+603003,Transpo - Air fare (local),Expenses,Travel,6200,Office Expenses,Travel and transportation expense
+604001,R&M - Auto,Expenses,Auto,6200,Office Expenses,Could create dedicated R&M Auto expense under 6000
+604002,R&M - Office,Expenses,Repair and maintenance,6200,Office Expenses,
+605001,Seminars and Training,Expenses,Cost of Labour,6400,Marketing Expenses,Better as HR/training; may need new 6450 Training Expenses
+605002,Meeting and Conference Expense,Expenses,Entertainment,6400,Marketing Expenses,Could be representation expense
+605003,Travelling - Abroad,Expenses,Travel,6200,Office Expenses,Travel expense
+605004,Hiring Expenses,Expenses,Cost of Labour,6200,Office Expenses,Recruitment-related
+606001,Insurance - Life,Expenses,Insurance,6200,Office Expenses,Could have dedicated insurance account under 6000
+606002,Insurance - Non Life,Expenses,Insurance,6200,Office Expenses,
+607001,Contributions and Donations,Expenses,Charitable Contributions,6200,Office Expenses,Could create 67xx Donations expense
+607002,Corporate Social Responsibility Expense,Expenses,Office/General Administrative Expenses,6200,Office Expenses,
+609001,Rental Expense,Expenses,Rent or Lease of Buildings,6200,Office Expenses,Could create specific rental expense under 6000
+609002,Water / Electricity,Expenses,Utilities,5230,Warehouse Utilities,If warehouse; otherwise 6200 Office Expenses
+609002-1,Water / Electricity - WATER,Expenses,Utilities,5230,Warehouse Utilities,Same mapping rule as parent
+609002-2,Water / Electricity - ELECTRICITY,Expenses,Utilities,5230,Warehouse Utilities,
+609003,Water / Electricity - CUSA,Expenses,Utilities,5230,Warehouse Utilities,CUSA building charges
+609004,Electricity,Expenses,Utilities,5230,Warehouse Utilities,Use cost_center to differentiate office vs warehouse
+610001,Representation and Entertainment,Expenses,Advertising/Promotional,6400,Marketing Expenses,Representation expense
+610002,Advertising Expense,Expenses,Advertising/Promotional,6410,Advertising,
+610003,Marketing Expense,Expenses,Advertising/Promotional,6420,Business Development,
+610004,Membership and Association Dues,Expenses,Dues and Subscriptions,6200,Office Expenses,Could create 6430 Memberships & Dues
+610005,Socials and Recreation / Company Activities,Expenses,Entertainment,6400,Marketing Expenses,Staff events; could separate HR cost center
+611001,Security Services,Expenses,Legal and professional fees,6200,Office Expenses,Or 5200 if warehouse security
+611002,Legal and Professional Fees,Expenses,Legal and professional fees,6200,Office Expenses,Professional services
+611003,Other Outside Services,Expenses,Legal and professional fees,6200,Office Expenses,General outsourced services
+612001,Subscription,Expenses,Dues and Subscriptions,6310,Software Subscriptions,If IT; use 6200 if non-IT subscriptions
+612002,Stationery & Office Supplies,Expenses,Office/General Administrative Expenses,6210,Office Supplies,
+612003,"Housekeeping & Safety, Pantry & Janitorial Expenses",Expenses,Office/General Administrative Expenses,6200,Office Expenses,Facility-related OPEX
+612004,Bank charges,Expenses,Office/General Administrative Expenses,6200,Office Expenses,Bank fees
+612005,Miscellaneous Expense,Expenses,Other Miscellaneous Service Cost,6200,Office Expenses,Try to minimize misc usage
+612008,Bad Debts,Expenses,Bad debts,6000,Operating Expenses,Could create bad debt expense under 6000
+613001,Taxes and Licenses (Permits/Fees),Expenses,Office/General Administrative Expenses,6200,Office Expenses,Non-income taxes and licenses
+613002,"Other Fees (Registration, Accreditation, etc)",Expenses,Taxes Paid,6200,Office Expenses,
+614001,Provision for Income Tax - Current,Expenses,Taxes Paid,6200,Office Expenses,Reclassification to 203001 on finalization
+614002,Provision for Income Tax - Deferred,Expenses,Taxes Paid,6200,Office Expenses,Deferred tax expense
+614003,Provision for Income Tax - Final,Expenses,Taxes Paid,6200,Office Expenses,
+615004,Germalin Subsidy,Expenses,Office/General Administrative Expenses,6200,Office Expenses,Specific subsidy; treat as operating expense
+615006,"Penalties ,Surcharge,Others",Expenses,Advertising/Promotional,8020,Penalties and Fines,Penalties and surcharges
+7900,Uncategorised Expense,Expenses,Other Miscellaneous Service Cost,6200,Office Expenses,Avoid; reclass to correct expense accounts
+,Unapplied Cash Bill Payment Expense,Expenses,Unapplied Cash Bill Payment Expense,6200,Office Expenses,Technical account; use clearing and reconciliations
+608001,Amortization - Leasehold Improvement,Other Expense,Amortisation,6000,Operating Expenses,Map to depreciation/amortization expense; may need dedicated 63xx account
+608002,Depreciation - Buildings,Other Expense,Amortisation,6000,Operating Expenses,Same as above; depreciation expense
+608004,Depreciation - Transportation & Delivery Equipment,Other Expense,Depreciation,6000,Operating Expenses,
+608005,Depreciation - Furniture & Fixtures,Other Expense,Depreciation,6000,Operating Expenses,
+608006,Depreciation - Data Processing Equipment - Hardware,Other Expense,Depreciation,6000,Operating Expenses,
+608007,Depreciation - Data Processing Equipment - Software,Other Expense,Depreciation,6000,Operating Expenses,
+608009,Depreciation - Linehaul & Warehousing Equipment,Other Expense,Depreciation,6000,Operating Expenses,
+615001,Interest Expense (Short term loan),Other Expense,Amortisation,8010,Interest Expense,Interest expense
+615001-1,615001 Interest Expense (Short term loan) - VISMIN,Other Expense,Amortisation,8010,Interest Expense,Region via dimension
+615002,Interest Income,Other Expense,Amortisation,7010,Interest Income,Reclassify from “Other Expense” to Other Income
+615003,Gain/Loss From Sale of Assets,Other Expense,Other Expense,8030,Loss on Asset Disposal,For gains, may map to other income; for losses, this account
+615005,Interest Expense (Long term loan),Other Expense,Penalties and settlements,8010,Interest Expense,
+,Reconciliation Discrepancies,Other Expense,Other Expense,8030,Loss on Asset Disposal,Or create separate reconciliation differences account

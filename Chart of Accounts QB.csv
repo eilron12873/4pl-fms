@@ -1,0 +1,239 @@
+Number,Name,Account type,Detail type
+101002,CIB - UCPB Baclaran (SA#20147-000623-6),Cash at bank and in hand,Current
+101005,CIB - DBP Pasay (CA#0-50006-495-1),Cash at bank and in hand,Current
+101006,CIB - BDO Airport Road Branch (SA#000498017803)),Cash at bank and in hand,Current
+101008,CIB - BDO Airport Road Branch (SA#000498016106),Cash at bank and in hand,Current
+101010,CIB - Philippine Business Bank Malibay Branch,Cash at bank and in hand,Current
+101011,CIB - DBP Pasay (Egov account),Cash at bank and in hand,Current
+101016,BDO Cebu Current # 010328004651,Cash at bank and in hand,Cash on hand
+101017,CIB - EastWest Bank (200040461522),Cash at bank and in hand,Current
+101018,CIB - BDO (490364799),Cash at bank and in hand,Cash on hand
+101019,CIB AllBank (SA# 007-10-00225-8),Cash at bank and in hand,Cash on hand
+101020,CIB AllBank (CA# 007-21-00062-8),Cash at bank and in hand,Current
+101021,CIB MetroBank (606-3-60657519-0),Cash at bank and in hand,Cash on hand
+101022,BDO Cebu Current 2 #010328007138,Cash at bank and in hand,Current
+102001,Accounts Receivable,Debtors,Debtors
+101001,Petty Cash Fund / Revolving Fund,Current assets,Allowance for bad debts
+102002,Allowance for Doubtful Accounts,Current assets,Allowance for bad debts
+102003,Accrued Revenue - VISMIN,Current assets,Other current assets
+102007,Accounts Receivables - Affiliates,Current assets,Loans to Others
+103001,Operating Supplies Inventory,Current assets,Stock
+103002,Office Supplies Inventory,Current assets,Stock
+104001,Advances to Officers and Employees - Personal,Current assets,Current
+104002,Advances to Officers and Employees - Official (for liquidation),Current assets,Current
+106001,Accounts Receivable - Others,Current assets,Undeposited Funds
+108001,Prepaid Insurance,Current assets,Allowance for bad debts
+108003,Prepaid Rent,Current assets,Prepaid Expenses
+108004,Prepaid Expense - Others,Current assets,Prepaid Expenses
+108005,Prior Years Excess Credits,Current assets,Prepaid Expenses
+109001,Prepaid Income Tax,Current assets,Other current assets
+109002,Input VAT - Local Purchases,Current assets,Allowance for bad debts
+109003,Input VAT - Services,Current assets,Allowance for bad debts
+109005,Prepaid Income Tax (VISMIN),Current assets,Allowance for bad debts
+109006,Input VAT - Local Purchases (VISMIN),Current assets,Allowance for bad debts
+109007,Input VAT - Services (VISMIN),Current assets,Allowance for bad debts
+109010,Excess Input VAT Carry Over,Current assets,Allowance for bad debts
+,Stock Asset,Current assets,Stock
+111101,Construction In Progress,Tangible assets,Other Tangible Assets
+111201,Buildings,Tangible assets,Buildings
+111202,Accumulated Depreciation - Buildings,Tangible assets,Accumulated Depreciation
+111203,Building Improvements,Tangible assets,Buildings
+111204,Accumulated Depreciation - Building Improvements,Tangible assets,Accumulated Depreciation
+111205,Leasehold Improvements,Tangible assets,Leasehold Improvements
+111206,Accumulated Depreciation - Leasehold Improvements,Tangible assets,Accumulated Depreciation
+111401,Transportation & Delivery Equipment,Tangible assets,Machinery and equipment
+111402,Accumulated Depreciation - Transportation & Delivery Equipment,Tangible assets,Accumulated Depreciation
+111403,Linehaul & Warehousing Equipment,Tangible assets,Machinery and equipment
+111404,Accumulated Depreciation - Linehaul & Warehousing Equipment,Tangible assets,Accumulated Depreciation
+111501,Furniture and Fixtures,Tangible assets,Furniture and Fixtures
+111502,Accumulated Depreciation - Furniture and Fixtures,Tangible assets,Accumulated Depreciation
+111503,Data Processing Equipment - Hardware,Tangible assets,Machinery and equipment
+111504,Accumulated Depreciation - Data Processing Equipment (Hardware),Tangible assets,Accumulated Depreciation
+111505,Data Processing Equipment - Software,Tangible assets,Machinery and equipment
+111506,Accumulated Depreciation - Data Processing Equipment (Software),Tangible assets,Accumulated Amortisation
+111601,Long-term Investments,Tangible assets,Other Tangible Assets
+106003,Advances for SSS Benefits,Non-current assets,Accumulated amortisation of non-current assets
+106004,Security / Cash Deposits,Non-current assets,Accumulated amortisation of non-current assets
+110003,Advances to Affiliates,Non-current assets,Accumulated amortisation of non-current assets
+110004,Deferred Charges,Non-current assets,Other Non-current Assets
+201001,Accounts Payable,Creditors,Creditors
+202001,HDMF Premium Payable,Current liabilities,Payroll Clearing
+202002,HDMF Loans Payable,Current liabilities,Payroll Clearing
+202003,HDMF Housing Loans Payable,Current liabilities,Payroll Clearing
+202004,SSS Premium Payable,Current liabilities,Payroll Clearing
+202005,SSS Loans Payable,Current liabilities,Loan Payable
+202006,PhilHealth Premium Payable,Current liabilities,Payroll Clearing
+203001,Income Tax Payable,Current liabilities,Current Tax Liability
+203002,Output VAT,Current liabilities,VAT Payable
+203003,Withholding Tax - Compensation,Current liabilities,Current Tax Liability
+203004,Withholding Tax - Expanded,Current liabilities,Current Tax Liability
+203005,Withholding Tax - Final,Current liabilities,Current Tax Liability
+203006,Output VAT (VISMIN),Current liabilities,VAT Payable
+203007,Withholding Tax Expanded VISMIN,Current liabilities,Current Tax Liability
+203008,VAT Payable,Current liabilities,VAT Payable
+203009,VAT Payable (VISMIN),Current liabilities,Current Tax Liability
+204001,Accrued Expenses Payable,Current liabilities,Current Liabilities
+204003,Accrued Interest Payable,Current liabilities,Current Liabilities
+204004,Accrued Payroll,Current liabilities,Payroll Clearing
+204005,Accrued Output VAT,Current liabilities,VAT Payable
+204006,Accrued Output VAT (VISMIN),Current liabilities,VAT Payable
+204007,Accrued Retirement,Current liabilities,Payroll Clearing
+204008,Accrued Expenses Payable (VISMIN),Current liabilities,Prepaid Expenses Payable
+204009,Accrued Interest Payable - VISMIN,Current liabilities,Short term borrowings from related parties
+205001,Loans Payable - Peso (Long Term),Current liabilities,Loan Payable
+205003,Loans Payable - Peso (Short Term),Current liabilities,Loan Payable
+205004,Accounts Payable - Others,Current liabilities,Current Liabilities
+205005,Loans Payable - Peso (Short term) - Vismin,Current liabilities,Loan Payable
+,Input VAT 12% Suspense,Current liabilities,VAT Suspense
+,Input VAT12 - Local Purchase Control,Current liabilities,VAT Payable
+,Input VAT12 - Local Purchase Suspense,Current liabilities,VAT Suspense
+,Input VAT12 - Services (VISMIN) Control,Current liabilities,VAT Payable
+,Input VAT12 - Services (VISMIN) Suspense,Current liabilities,VAT Suspense
+,Input VAT12- Local Purchases - VISMIN Control,Current liabilities,VAT Payable
+,Input VAT12- Local Purchases - VISMIN Suspense,Current liabilities,VAT Suspense
+,Input VAT12- Local Purchases Control,Current liabilities,VAT Payable
+,Input VAT12- Local Purchases Suspense,Current liabilities,VAT Suspense
+,Output Vat 12% Suspense,Current liabilities,VAT Suspense
+,Output Tax - 12% Sales Suspense,Current liabilities,VAT Suspense
+,Output Tax 12 % Suspense,Current liabilities,VAT Suspense
+,Output VAT (VISMIN) 1,Current liabilities,VAT Suspense
+,Output VAT12 - Service Control,Current liabilities,VAT Payable
+,Output VAT12 - Service Suspense,Current liabilities,VAT Suspense
+,VAT Control,Current liabilities,VAT Payable
+,VAT Suspense,Current liabilities,VAT Suspense
+206001,Dividends Payable,Non-current liabilities,Other non-current liabilities
+206003,Advances from Stockholders,Non-current liabilities,Other non-current liabilities
+206006,Advances from Customers,Non-current liabilities,Other non-current liabilities
+207001,Deferred Income Tax Liability,Non-current liabilities,Other non-current liabilities
+207002,MCIT Payable,Non-current liabilities,Other non-current liabilities
+301001,Authorized Capital Stock,Equity,Owner's Equity
+301002,Unissued Capital Stock,Equity,Called up share capital
+301003,Stock Subscription Receivable,Equity,Called up share capital
+301004,Paid-In Capital in Excess of PAR,Equity,Paid-in capital or surplus
+301005,Treasury Stocks,Equity,Treasury Shares
+301006,Deposit for Future Subscription,Equity,Ordinary shares
+301007,Subscribed Capital Stock,Equity,Paid-in capital or surplus
+302001,RETAINED EARNINGS,Equity,Retained Earnings
+,Opening Balance Equity,Equity,Opening Balance Equity
+401001,Distribution,Income,Service/Fee Income
+401002,Warehousing,Income,Service/Fee Income
+401002-1,FSS Systems Inc.,Income,Service/Fee Income
+401003,Car Carier,Income,Service/Fee Income
+401004,Project Logistics,Income,Service/Fee Income
+401005,Other Income,Income,Other Primary Income
+401006,Special Projects,Income,Service/Fee Income
+401007,Walk-in Income,Income,Service/Fee Income
+401008,Rental Income,Income,Service/Fee Income
+401009,Containerized,Income,Service/Fee Income
+,Billable Expense Income,Income,Other Primary Income
+,Sales of Product Income,Income,Sales of Product Income
+,Shipping Income,Income,Other Primary Income
+,Unapplied Cash Payment Income,Income,Unapplied Cash Payment Income
+,Uncategorised Income,Income,Other Primary Income
+,Uncategorized Income,Income,Other Primary Income
+501001,Distribution COS,Cost of sales,Cost of Sales
+501002,Warehousing COS,Cost of sales,Cost of Sales
+501003,Car Carrier COS,Cost of sales,Cost of Sales
+501004,Project Logistics COS,Cost of sales,Cost of Sales
+501005,Direct and Operating Expenses,Cost of sales,Supplies and materials - COS
+501006,Special Project - COS,Cost of sales,Cost of Labour - COS
+810001,OP - Fuel,Cost of sales,Cost of Sales
+810002,OP - Toll Fee,Cost of sales,Cost of Sales
+810003,OP - Terminal Fee,Cost of sales,Cost of Sales
+810009,OP - Salaries and Wages Expense,Cost of sales,Cost of Labour - COS
+810010,OP - Overtime Pay,Cost of sales,Cost of Labour - COS
+810011,OP - SSS/EC Premium Expense,Cost of sales,Cost of Labour - COS
+810012,OP - HDMF Premium Expense,Cost of sales,Cost of Labour - COS
+810013,OP - PhilHealth Premium Expense,Cost of sales,Cost of Labour - COS
+810014,OP - Bonus / 13th Month,Cost of sales,Cost of Labour - COS
+810015,OP - Salaries and Wages Expense (VL/SL),Cost of sales,Cost of Labour - COS
+810016,OP - Other Employee Benefits / Employee Relations,Cost of sales,Cost of Labour - COS
+810017,OP - Meals and Subsistence,Cost of sales,Cost of Labour - COS
+810018,OP - Parking Fee,Cost of sales,Cost of Sales
+810019,OP - Commission,Cost of sales,Cost of Sales
+810020,"OP - Shipping, Freight and Delivery",Cost of sales,"Shipping, Freight and Delivery - COS"
+810021,OP - Accomodation,Cost of sales,Other costs of sales - COS
+810022,OP - Rental,Cost of sales,Cost of Sales
+810023,OP - Retirement Contributions,Cost of sales,Cost of Labour - COS
+810024,OP - R & M - Auto,Cost of sales,Cost of Sales
+810025,OP - R & M - Office,Cost of sales,Cost of Sales
+810026,OP - R & M - Warehouse,Cost of sales,Cost of Sales
+810027,OP - Communication Expense - Telephone,Cost of sales,Cost of Sales
+810028,OP - Contractual Services,Cost of sales,Cost of Labour - COS
+810029,OP - Transpo - Auto Expense (Gas and Oil),Cost of sales,Cost of Sales
+810030,OP - Communication Expense - Mobile,Cost of sales,Cost of Sales
+810031,OP - Hazard Pay,Cost of sales,Cost of Sales
+810033,OP - Subscription,Cost of sales,Other costs of sales - COS
+810034,OP - Insurance,Cost of sales,Other costs of sales - COS
+,Cost of sales,Cost of sales,Supplies and materials - COS
+,Inventory Shrinkage,Cost of sales,Supplies and materials - COS
+601001,Salaries and Wages Expense,Expenses,Payroll Expenses
+601002,Overtime Pay,Expenses,Payroll Expenses
+601003,SSS/EC Premium Expense,Expenses,Taxes Paid
+601004,HDMF Premium Expense,Expenses,Taxes Paid
+601005,PhilHealth Premium Expense,Expenses,Taxes Paid
+601006,Bonus / 13th Month,Expenses,Payroll Expenses
+601007,Salaries and Wages Expense (VL/SL),Expenses,Payroll Expenses
+601008,Other Employee Benefits / Employee Relations,Expenses,Payroll Expenses
+601009,Meals and Subsistence,Expenses,Meals and entertainment
+601010,Retirement Contributions,Expenses,Payroll Expenses
+601011,Hazard Pay,Expenses,Payroll Expenses
+602001,Postal/Courier Expense,Expenses,"Shipping, Freight, and Delivery"
+602002,Communication Expense - Telephone,Expenses,Office/General Administrative Expenses
+602003,Communication Expense - Mobile,Expenses,Office/General Administrative Expenses
+602004,Communication Expense - Internet / broadband,Expenses,Office/General Administrative Expenses
+603001,Transpo - Auto Expense (Gas and Oil),Expenses,Travel
+603002,"Transpo - Others (Parking fees, toll fees, PUV fares)",Expenses,Travel
+603003,Transpo - Air fare (local),Expenses,Travel
+604001,R&M - Auto,Expenses,Auto
+604002,R&M - Office,Expenses,Repair and maintenance
+605001,Seminars and Training,Expenses,Cost of Labour
+605002,Meeting and Conference Expense,Expenses,Entertainment
+605003,Travelling - Abroad,Expenses,Travel
+605004,Hiring Expenses,Expenses,Cost of Labour
+606001,Insurance - Life,Expenses,Insurance
+606002,Insurance - Non Life,Expenses,Insurance
+607001,Contributions and Donations,Expenses,Charitable Contributions
+607002,Corporate Social Responsibility Expense,Expenses,Office/General Administrative Expenses
+609001,Rental Expense,Expenses,Rent or Lease of Buildings
+609002,Water / Electricity,Expenses,Utilities
+609002-1,Water / Electricity - WATER,Expenses,Utilities
+609002-2,Water / Electricity - ELECTRICITY,Expenses,Utilities
+609003,Water / Electricity - CUSA,Expenses,Utilities
+609004,Electricity,Expenses,Utilities
+610001,Representation and Entertainment,Expenses,Advertising/Promotional
+610002,Advertising Expense,Expenses,Advertising/Promotional
+610003,Marketing Expense,Expenses,Advertising/Promotional
+610004,Membership and Association Dues,Expenses,Dues and Subscriptions
+610005,Socials and Recreation / Company Activities,Expenses,Entertainment
+611001,Security Services,Expenses,Legal and professional fees
+611002,Legal and Professional Fees,Expenses,Legal and professional fees
+611003,Other Outside Services,Expenses,Legal and professional fees
+612001,Subscription,Expenses,Dues and Subscriptions
+612002,Stationery & Office Supplies,Expenses,Office/General Administrative Expenses
+612003,"Housekeeping & Safety, Pantry & Janitorial Expenses",Expenses,Office/General Administrative Expenses
+612004,Bank charges,Expenses,Office/General Administrative Expenses
+612005,Miscellaneous Expense,Expenses,Other Miscellaneous Service Cost
+612008,Bad Debts,Expenses,Bad debts
+613001,Taxes and Licenses (Permits/Fees),Expenses,Office/General Administrative Expenses
+613002,"Other Fees (Registration, Accreditation, etc)",Expenses,Taxes Paid
+614001,Provision for Income Tax - Current,Expenses,Taxes Paid
+614002,Provision for Income Tax - Deferred,Expenses,Taxes Paid
+614003,Provision for Income Tax - Final,Expenses,Taxes Paid
+615004,Germalin Subsidy,Expenses,Office/General Administrative Expenses
+615006,"Penalties ,Surcharge,Others",Expenses,Advertising/Promotional
+7900,Uncategorised Expense,Expenses,Other Miscellaneous Service Cost
+,Unapplied Cash Bill Payment Expense,Expenses,Unapplied Cash Bill Payment Expense
+608001,Amortization - Leasehold Improvement,Other Expense,Amortisation
+608002,Depreciation - Buildings,Other Expense,Amortisation
+608004,Depreciation - Transportation & Delivery Equipment,Other Expense,Depreciation
+608005,Depreciation - Furniture & Fixtures,Other Expense,Depreciation
+608006,Depreciation - Data Processing Equipment - Hardware,Other Expense,Depreciation
+608007,Depreciation - Data Processing Equipment - Software,Other Expense,Depreciation
+608009,Depreciation - Linehaul & Warehousing Equipment,Other Expense,Depreciation
+615001,Interest Expense (Short term loan),Other Expense,Amortisation
+615001-1,615001 Interest Expense (Short term loan) - VISMIN,Other Expense,Amortisation
+615002,Interest Income,Other Expense,Amortisation
+615003,Gain/Loss From Sale of Assets,Other Expense,Other Expense
+615005,Interest Expense (Long term loan),Other Expense,Penalties and settlements
+,Reconciliation Discrepancies,Other Expense,Other Expense
