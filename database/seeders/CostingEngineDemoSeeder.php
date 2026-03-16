@@ -71,8 +71,8 @@ class CostingEngineDemoSeeder extends Seeder
     /** @param \Illuminate\Support\Collection<int, BillingClient> $clients */
     private function ensureCostJournalLines($clients): void
     {
-        $expenseAccount = Account::where('code', '5200')->first(); // Transport Expense
-        $cashAccount = Account::where('code', '1400')->first();
+        $expenseAccount = Account::where('code', '530000')->first(); // Transport Cost
+        $cashAccount = Account::where('code', '112100')->first(); // Cash in Bank - BDO
         if (! $expenseAccount || ! $cashAccount) {
             return;
         }
@@ -116,7 +116,7 @@ class CostingEngineDemoSeeder extends Seeder
 
         $warehouse = Warehouse::where('is_active', true)->first();
         if ($warehouse) {
-            $revAccount = Account::where('code', '4200')->first(); // Storage Revenue
+            $revAccount = Account::where('code', '412000')->first(); // Storage Revenue
             if ($revAccount) {
                 $revAmount = 800.00;
                 $expAmount = 300.00;

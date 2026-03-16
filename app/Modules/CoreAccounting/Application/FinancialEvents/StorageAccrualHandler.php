@@ -30,8 +30,8 @@ class StorageAccrualHandler implements FinancialEventHandlerInterface
 
         if ($lines === null) {
             $amount = (float) $payload['amount'];
-            $storageExpenseCode = $payload['storage_expense_account_code'] ?? '5100';
-            $accruedLiabilityCode = $payload['accrued_liability_account_code'] ?? '2100';
+            $storageExpenseCode = $payload['storage_expense_account_code'] ?? '521000';
+            $accruedLiabilityCode = $payload['accrued_liability_account_code'] ?? '211100';
 
             $lines = [
                 [

@@ -1,0 +1,233 @@
+code,name,type,parent_code,level,is_posting,is_active
+100000,Assets,asset,,1,0,1
+110000,Current Assets,asset,100000,2,0,1
+111000,Cash and Cash Equivalents,asset,110000,3,0,1
+111100,Cash on Hand,asset,111000,4,1,1
+111200,Petty Cash Fund,asset,111000,4,1,1
+111300,Change Fund,asset,111000,4,1,1
+111400,Cash in Transit,asset,111000,4,1,1
+111500,Undeposited Funds,asset,111000,4,1,1
+112000,Cash in Bank,asset,110000,3,0,1
+112100,Cash in Bank - BDO,asset,112000,4,1,1
+112200,Cash in Bank - BPI,asset,112000,4,1,1
+112300,Cash in Bank - Metrobank,asset,112000,4,1,1
+112400,Cash in Bank - Landbank,asset,112000,4,1,1
+112500,Cash in Bank - Unionbank,asset,112000,4,1,1
+112600,Cash in Bank - Security Bank,asset,112000,4,1,1
+113000,Digital Wallet Accounts,asset,110000,3,0,1
+113100,GCash Wallet,asset,113000,4,1,1
+113200,Maya Wallet,asset,113000,4,1,1
+113300,PayPal Wallet,asset,113000,4,1,1
+114000,Short-Term Investments,asset,110000,3,0,1
+114100,Time Deposits,asset,114000,4,1,1
+114200,Treasury Bills,asset,114000,4,1,1
+114300,Money Market Placements,asset,114000,4,1,1
+120000,Receivables,asset,100000,2,0,1
+121000,Accounts Receivable,asset,120000,3,0,1
+121100,Trade Receivables,asset,121000,4,1,1
+121200,Non-Trade Receivables,asset,121000,4,1,1
+121300,Related Party Receivables,asset,121000,4,1,1
+121400,Employee Receivables,asset,121000,4,1,1
+121500,Advances to Employees,asset,121000,4,1,1
+121600,Advances to Officers,asset,121000,4,1,1
+121700,Advances to Suppliers,asset,121000,4,1,1
+122000,Allowance for Doubtful Accounts,asset,120000,3,1,1
+123000,Notes Receivable,asset,120000,3,0,1
+123100,Short-term Notes Receivable,asset,123000,4,1,1
+123200,Long-term Notes Receivable,asset,123000,4,1,1
+124000,Interest Receivable,asset,120000,3,1,1
+125000,Dividends Receivable,asset,120000,3,1,1
+126000,VAT Receivable,asset,120000,3,0,1
+126100,Input VAT,asset,126000,4,1,1
+126200,Creditable Withholding Tax,asset,126000,4,1,1
+126300,VAT Refund Receivable,asset,126000,4,1,1
+127000,Other Receivables,asset,120000,3,0,1
+127100,Insurance Claims Receivable,asset,127000,4,1,1
+127200,Refund Receivable,asset,127000,4,1,1
+130000,Inventory,asset,100000,2,0,1
+131000,Merchandise Inventory,asset,130000,3,1,1
+132000,Raw Materials Inventory,asset,130000,3,1,1
+133000,Work in Process Inventory,asset,130000,3,1,1
+134000,Finished Goods Inventory,asset,130000,3,1,1
+135000,Packaging Materials Inventory,asset,130000,3,1,1
+136000,Spare Parts Inventory,asset,130000,3,1,1
+137000,Supplies Inventory,asset,130000,3,1,1
+138000,Inventory Adjustments,asset,130000,3,0,1
+138100,Inventory Shrinkage,asset,138000,4,1,1
+138200,Inventory Write-Down,asset,138000,4,1,1
+138300,Inventory Obsolescence,asset,138000,4,1,1
+140000,Prepaid Expenses,asset,100000,2,0,1
+141000,Prepaid Rent,asset,140000,3,1,1
+142000,Prepaid Insurance,asset,140000,3,1,1
+143000,Prepaid Taxes,asset,140000,3,1,1
+144000,Prepaid Licenses,asset,140000,3,1,1
+145000,Prepaid Maintenance,asset,140000,3,1,1
+146000,Prepaid Software Subscriptions,asset,140000,3,1,1
+147000,Prepaid Advertising,asset,140000,3,1,1
+148000,Prepaid Utilities,asset,140000,3,1,1
+150000,Non-Current Assets,asset,100000,2,0,1
+151000,Investments,asset,150000,3,0,1
+151100,Investment in Subsidiary,asset,151000,4,1,1
+151200,Investment in Associate,asset,151000,4,1,1
+151300,Long-term Investments,asset,151000,4,1,1
+152000,Property Plant and Equipment,asset,150000,3,0,1
+152100,Land,asset,152000,4,1,1
+152200,Buildings,asset,152000,4,1,1
+152300,Leasehold Improvements,asset,152000,4,1,1
+152400,Machinery,asset,152000,4,1,1
+152500,Equipment,asset,152000,4,1,1
+152600,Office Furniture,asset,152000,4,1,1
+152700,Vehicles,asset,152000,4,1,1
+152800,IT Equipment,asset,152000,4,1,1
+152900,Warehouse Equipment,asset,152000,4,1,1
+153000,Accumulated Depreciation (Contra Asset),asset,150000,3,0,1
+153100,Accumulated Depreciation - Buildings,asset,153000,4,1,1
+153200,Accumulated Depreciation - Machinery,asset,153000,4,1,1
+153300,Accumulated Depreciation - Equipment,asset,153000,4,1,1
+153400,Accumulated Depreciation - Vehicles,asset,153000,4,1,1
+153500,Accumulated Depreciation - Furniture,asset,153000,4,1,1
+153600,Accumulated Depreciation - IT Equipment,asset,153000,4,1,1
+154000,Intangible Assets,asset,150000,3,0,1
+154100,Software,asset,154000,4,1,1
+154200,Software Development,asset,154000,4,1,1
+154300,Patents,asset,154000,4,1,1
+154400,Copyrights,asset,154000,4,1,1
+154500,Trademarks,asset,154000,4,1,1
+154600,Franchise Rights,asset,154000,4,1,1
+154700,Goodwill,asset,154000,4,1,1
+200000,Liabilities,liability,,1,0,1
+210000,Current Liabilities,liability,200000,2,0,1
+211000,Accounts Payable,liability,210000,3,0,1
+211100,Trade Payables,liability,211000,4,1,1
+211200,Non-Trade Payables,liability,211000,4,1,1
+211300,Related Party Payables,liability,211000,4,1,1
+212000,Accrued Expenses,liability,210000,3,0,1
+212100,Accrued Salaries,liability,212000,4,1,1
+212200,Accrued Utilities,liability,212000,4,1,1
+212300,Accrued Rent,liability,212000,4,1,1
+212400,Accrued Interest,liability,212000,4,1,1
+212500,Accrued Professional Fees,liability,212000,4,1,1
+213000,Taxes Payable,liability,210000,3,0,1
+213100,VAT Payable,liability,213000,4,1,1
+213200,Withholding Tax Payable,liability,213000,4,1,1
+213300,Expanded Withholding Tax,liability,213000,4,1,1
+213400,Final Withholding Tax,liability,213000,4,1,1
+213500,Income Tax Payable,liability,213000,4,1,1
+213600,Percentage Tax Payable,liability,213000,4,1,1
+213700,Documentary Stamp Tax Payable,liability,213000,4,1,1
+214000,Payroll Liabilities,liability,210000,3,0,1
+214100,SSS Payable,liability,214000,4,1,1
+214200,PhilHealth Payable,liability,214000,4,1,1
+214300,Pag-IBIG Payable,liability,214000,4,1,1
+214400,Payroll Taxes Payable,liability,214000,4,1,1
+215000,Short-Term Loans,liability,210000,3,0,1
+215100,Bank Loans,liability,215000,4,1,1
+215200,Credit Lines,liability,215000,4,1,1
+215300,Revolving Credit,liability,215000,4,1,1
+215400,Notes Payable - Short Term,liability,215000,4,1,1
+220000,Long Term Liabilities,liability,200000,2,0,1
+221000,Long-term Bank Loans,liability,220000,3,1,1
+222000,Mortgage Payable,liability,220000,3,1,1
+223000,Lease Liability,liability,220000,3,1,1
+224000,Bonds Payable,liability,220000,3,1,1
+225000,Notes Payable - Long Term,liability,220000,3,1,1
+226000,Deferred Tax Liability,liability,220000,3,1,1
+300000,Equity,equity,,1,0,1
+310000,Share Capital,equity,300000,2,0,1
+311000,Common Stock,equity,310000,3,1,1
+312000,Preferred Stock,equity,310000,3,1,1
+320000,Additional Paid-in Capital,equity,300000,2,1,1
+330000,Retained Earnings,equity,300000,2,0,1
+331000,Prior Year Retained Earnings,equity,330000,3,1,1
+332000,Current Year Earnings,equity,330000,3,1,1
+340000,Dividends,equity,300000,2,0,1
+341000,Dividends Declared,equity,340000,3,1,1
+342000,Dividends Payable,equity,340000,3,1,1
+350000,Treasury Stock,equity,300000,2,1,1
+400000,Revenue,revenue,,1,0,1
+410000,Service Revenue,revenue,400000,2,0,1
+411000,Warehousing Revenue,revenue,410000,3,1,1
+412000,Storage Revenue,revenue,410000,3,1,1
+413000,Handling Revenue,revenue,410000,3,1,1
+414000,Distribution Revenue,revenue,410000,3,1,1
+415000,Logistics Management Fee,revenue,410000,3,1,1
+420000,Transport Revenue,revenue,400000,2,0,1
+421000,Trucking Revenue,revenue,420000,3,1,1
+422000,Delivery Revenue,revenue,420000,3,1,1
+423000,Freight Revenue,revenue,420000,3,1,1
+424000,Container Handling Revenue,revenue,420000,3,1,1
+430000,Other Service Revenue,revenue,400000,2,0,1
+431000,Consultation Revenue,revenue,430000,3,1,1
+432000,Installation Revenue,revenue,430000,3,1,1
+433000,Maintenance Revenue,revenue,430000,3,1,1
+500000,Cost of Services,expense,,1,0,1
+510000,Direct Labor,expense,500000,2,0,1
+511000,Warehouse Labor,expense,510000,3,1,1
+512000,Drivers Wages,expense,510000,3,1,1
+513000,Helpers Wages,expense,510000,3,1,1
+520000,Handling Cost,expense,500000,2,0,1
+521000,Equipment Operations,expense,520000,3,1,1
+522000,Forklift Fuel,expense,520000,3,1,1
+523000,Warehouse Supplies,expense,520000,3,1,1
+530000,Transport Cost,expense,500000,2,0,1
+531000,Fuel Expense,expense,530000,3,1,1
+532000,Truck Maintenance,expense,530000,3,1,1
+533000,Toll Fees,expense,530000,3,1,1
+534000,Parking Fees,expense,530000,3,1,1
+600000,Operating Expenses,expense,,1,0,1
+610000,Salaries Expense,expense,600000,2,0,1
+611000,Office Salaries,expense,610000,3,1,1
+612000,Management Salaries,expense,610000,3,1,1
+613000,Employee Benefits,expense,610000,3,1,1
+614000,Overtime Pay,expense,610000,3,1,1
+615000,Bonuses,expense,610000,3,1,1
+620000,Office Expenses,expense,600000,2,0,1
+621000,Office Supplies,expense,620000,3,1,1
+622000,Printing and Stationery,expense,620000,3,1,1
+623000,Courier Expense,expense,620000,3,1,1
+624000,Postage Expense,expense,620000,3,1,1
+625000,Pantry Supplies,expense,620000,3,1,1
+630000,Facility Expenses,expense,600000,2,0,1
+631000,Rent Expense,expense,630000,3,1,1
+632000,Utilities Expense,expense,630000,3,1,1
+633000,Electricity Expense,expense,630000,3,1,1
+634000,Water Expense,expense,630000,3,1,1
+635000,Internet Expense,expense,630000,3,1,1
+636000,Building Maintenance,expense,630000,3,1,1
+640000,Professional Fees,expense,600000,2,0,1
+641000,Accounting Fees,expense,640000,3,1,1
+642000,Legal Fees,expense,640000,3,1,1
+643000,Audit Fees,expense,640000,3,1,1
+644000,Consulting Fees,expense,640000,3,1,1
+650000,Marketing Expense,expense,600000,2,0,1
+651000,Advertising Expense,expense,650000,3,1,1
+652000,Promotions,expense,650000,3,1,1
+653000,Sponsorship,expense,650000,3,1,1
+654000,Digital Marketing,expense,650000,3,1,1
+660000,IT Expenses,expense,600000,2,0,1
+661000,Software Subscription,expense,660000,3,1,1
+662000,Cloud Hosting,expense,660000,3,1,1
+663000,IT Maintenance,expense,660000,3,1,1
+664000,Cybersecurity Expense,expense,660000,3,1,1
+700000,Other Income,other_income,,1,0,1
+710000,Interest Income,other_income,700000,2,1,1
+720000,Gain on Sale of Assets,other_income,700000,2,1,1
+730000,Foreign Exchange Gain,other_income,700000,2,1,1
+740000,Rental Income,other_income,700000,2,1,1
+750000,Miscellaneous Income,other_income,700000,2,1,1
+800000,Other Expenses,other_expense,,1,0,1
+810000,Interest Expense,other_expense,800000,2,1,1
+820000,Bank Charges,other_expense,800000,2,1,1
+830000,Foreign Exchange Loss,other_expense,800000,2,1,1
+840000,Loss on Asset Disposal,other_expense,800000,2,1,1
+850000,Penalties and Fines,other_expense,800000,2,1,1
+860000,Donations,other_expense,800000,2,1,1
+870000,Extraordinary Loss,other_expense,800000,2,1,1
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+, ,,,,,

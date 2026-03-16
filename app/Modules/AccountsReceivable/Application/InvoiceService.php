@@ -228,8 +228,8 @@ class InvoiceService
         if ($invoice->isIssued()) {
             return;
         }
-        $receivableCode = $accountCodes['receivable'] ?? '1100';
-        $revenueCode = $accountCodes['revenue'] ?? '4100';
+        $receivableCode = $accountCodes['receivable'] ?? '121100';
+        $revenueCode = $accountCodes['revenue'] ?? '423000';
         $total = (float) $invoice->total;
 
         DB::transaction(function () use ($invoice, $receivableCode, $revenueCode, $total) {
@@ -296,8 +296,8 @@ class InvoiceService
      */
     public function createCreditNote(ArInvoice $invoice, float $amount, string $reason = '', array $accountCodes = []): ArInvoiceAdjustment
     {
-        $receivableCode = $accountCodes['receivable'] ?? '1100';
-        $revenueCode = $accountCodes['revenue'] ?? '4100';
+        $receivableCode = $accountCodes['receivable'] ?? '121100';
+        $revenueCode = $accountCodes['revenue'] ?? '423000';
 
         return DB::transaction(function () use ($invoice, $amount, $reason, $receivableCode, $revenueCode) {
             $adjNumber = 'CN-' . $invoice->invoice_number . '-' . ($invoice->adjustments()->count() + 1);

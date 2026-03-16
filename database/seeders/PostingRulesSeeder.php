@@ -47,8 +47,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $arAccountId = $this->accountId('1100', 'Accounts Receivable', 'asset');
-        $revenueAccountId = $this->accountId('4100', 'Freight Revenue', 'revenue');
+        $arAccountId = $this->accountId('121100', 'Trade Receivables', 'asset');
+        $revenueAccountId = $this->accountId('423000', 'Freight Revenue', 'revenue');
 
         $this->createStandardLines(
             $rule,
@@ -83,9 +83,9 @@ class PostingRulesSeeder extends Seeder
             $creditLine->update(['resolver_type' => 'revenue_by_service_line']);
         }
 
-        $this->ensureRevenueResolver('warehousing', '4200', 'Storage Revenue');
-        $this->ensureRevenueResolver('transport', '4100', 'Freight Revenue');
-        $this->ensureRevenueResolver('project_cargo', '4300', 'Project Revenue');
+        $this->ensureRevenueResolver('warehousing', '411000', 'Warehousing Revenue');
+        $this->ensureRevenueResolver('transport', '423000', 'Freight Revenue');
+        $this->ensureRevenueResolver('project_cargo', '414000', 'Distribution Revenue');
     }
 
     protected function seedSubcontractedVendorInvoiceRule(): void
@@ -113,8 +113,8 @@ class PostingRulesSeeder extends Seeder
         );
 
         if (! $conditionalRule->lines()->exists()) {
-            $costOfFreightId = $this->accountId('5300', 'Cost of Goods Sold', 'expense');
-            $apAccountId = $this->accountId('2100', 'Accounts Payable', 'liability');
+            $costOfFreightId = $this->accountId('530100', 'Cost of Goods Sold', 'expense');
+            $apAccountId = $this->accountId('211100', 'Trade Payables', 'liability');
 
             $this->createStandardLines(
                 $conditionalRule,
@@ -167,8 +167,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $expenseAccountId = $this->accountId('5100', 'Storage Expense', 'expense');
-        $liabilityAccountId = $this->accountId('2100', 'Accounts Payable', 'liability');
+        $expenseAccountId = $this->accountId('521000', 'Equipment Operations', 'expense');
+        $liabilityAccountId = $this->accountId('211100', 'Trade Payables', 'liability');
 
         $this->createStandardLines(
             $rule,
@@ -196,8 +196,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $expenseAccountId = $this->accountId('5200', 'Transport Expense', 'expense');
-        $apAccountId = $this->accountId('2100', 'Accounts Payable', 'liability');
+        $expenseAccountId = $this->accountId('530000', 'Transport Cost', 'expense');
+        $apAccountId = $this->accountId('211100', 'Trade Payables', 'liability');
 
         $this->createStandardLines(
             $rule,
@@ -222,8 +222,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $receivableAccountId = $this->accountId('1200', 'Inventory', 'asset');
-        $revenueAccountId = $this->accountId('4300', 'Project Revenue', 'revenue');
+        $receivableAccountId = $this->accountId('131000', 'Merchandise Inventory', 'asset');
+        $revenueAccountId = $this->accountId('431000', 'Consultation Revenue', 'revenue');
 
         $this->createStandardLines(
             $rule,
@@ -251,8 +251,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $accruedRevenueId = $this->accountId('4205', 'Accrued Storage Revenue', 'revenue');
-        $storageRevenueId = $this->accountId('4200', 'Storage Revenue', 'revenue');
+        $accruedRevenueId = $this->accountId('412000', 'Accrued Storage Revenue', 'revenue');
+        $storageRevenueId = $this->accountId('412000', 'Storage Revenue', 'revenue');
 
         $this->createStandardLines(
             $rule,
@@ -280,8 +280,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $arAccountId = $this->accountId('1100', 'Accounts Receivable', 'asset');
-        $deliveryRevenueId = $this->accountId('4110', 'Delivery Revenue', 'revenue');
+        $arAccountId = $this->accountId('121100', 'Trade Receivables', 'asset');
+        $deliveryRevenueId = $this->accountId('422000', 'Delivery Revenue', 'revenue');
 
         $this->createStandardLines(
             $rule,
@@ -309,8 +309,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $freightExpenseId = $this->accountId('5200', 'Transport Expense', 'expense');
-        $accruedPayablesId = $this->accountId('2200', 'Accrued Liabilities', 'liability');
+        $freightExpenseId = $this->accountId('530000', 'Transport Cost', 'expense');
+        $accruedPayablesId = $this->accountId('212000', 'Accrued Expenses', 'liability');
 
         $this->createStandardLines(
             $rule,
@@ -337,8 +337,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $fuelExpenseId = $this->accountId('5210', 'Fuel Expense', 'expense');
-        $apAccountId = $this->accountId('2100', 'Accounts Payable', 'liability');
+        $fuelExpenseId = $this->accountId('531000', 'Fuel Expense', 'expense');
+        $apAccountId = $this->accountId('211100', 'Trade Payables', 'liability');
 
         $this->createStandardLines(
             $rule,
@@ -365,8 +365,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $arAccountId = $this->accountId('1100', 'Accounts Receivable', 'asset');
-        $revenueId = $this->accountId('4100', 'Freight Revenue', 'revenue');
+        $arAccountId = $this->accountId('121100', 'Trade Receivables', 'asset');
+        $revenueId = $this->accountId('423000', 'Freight Revenue', 'revenue');
 
         $this->createStandardLines(
             $rule,
@@ -393,8 +393,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $cashId = $this->accountId('1400', 'Cash and Bank', 'asset');
-        $arAccountId = $this->accountId('1100', 'Accounts Receivable', 'asset');
+        $cashId = $this->accountId('112100', 'Cash in Bank - BDO', 'asset');
+        $arAccountId = $this->accountId('121100', 'Trade Receivables', 'asset');
 
         $this->createStandardLines(
             $rule,
@@ -421,8 +421,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $revenueId = $this->accountId('4100', 'Freight Revenue', 'revenue');
-        $arAccountId = $this->accountId('1100', 'Accounts Receivable', 'asset');
+        $revenueId = $this->accountId('423000', 'Freight Revenue', 'revenue');
+        $arAccountId = $this->accountId('121100', 'Trade Receivables', 'asset');
 
         $this->createStandardLines(
             $rule,
@@ -449,8 +449,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $apAccountId = $this->accountId('2100', 'Accounts Payable', 'liability');
-        $cashId = $this->accountId('1400', 'Cash and Bank', 'asset');
+        $apAccountId = $this->accountId('211100', 'Trade Payables', 'liability');
+        $cashId = $this->accountId('112100', 'Cash in Bank - BDO', 'asset');
 
         $this->createStandardLines(
             $rule,
@@ -475,8 +475,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $inventoryId = $this->accountId('1200', 'Inventory', 'asset');
-        $accruedPayablesId = $this->accountId('2200', 'Accrued Liabilities', 'liability');
+        $inventoryId = $this->accountId('131000', 'Merchandise Inventory', 'asset');
+        $accruedPayablesId = $this->accountId('212000', 'Accrued Expenses', 'liability');
 
         $this->createStandardLines(
             $rule,
@@ -501,8 +501,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $adjustmentExpenseId = $this->accountId('5300', 'Cost of Goods Sold', 'expense');
-        $inventoryId = $this->accountId('1200', 'Inventory', 'asset');
+        $adjustmentExpenseId = $this->accountId('530100', 'Cost of Goods Sold', 'expense');
+        $inventoryId = $this->accountId('131000', 'Merchandise Inventory', 'asset');
 
         $this->createStandardLines(
             $rule,
@@ -527,8 +527,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $fixedAssetId = $this->accountId('1300', 'Fixed Assets', 'asset');
-        $apAccountId = $this->accountId('2100', 'Accounts Payable', 'liability');
+        $fixedAssetId = $this->accountId('152500', 'Equipment', 'asset');
+        $apAccountId = $this->accountId('211100', 'Trade Payables', 'liability');
 
         $this->createStandardLines(
             $rule,
@@ -553,8 +553,8 @@ class PostingRulesSeeder extends Seeder
             return;
         }
 
-        $deprExpenseId = $this->accountId('5400', 'Depreciation Expense', 'expense');
-        $accumDeprId = $this->accountId('1320', 'Accumulated Depreciation', 'asset');
+        $deprExpenseId = $this->accountId('651000', 'Depreciation Expense', 'expense');
+        $accumDeprId = $this->accountId('153300', 'Accumulated Depreciation - Equipment', 'asset');
 
         $this->createStandardLines(
             $rule,

@@ -140,9 +140,10 @@ class CoreAccountingController extends Controller
             $output = fopen('php://output', 'w');
             // Header row
             fputcsv($output, ['code', 'name', 'type', 'parent_code', 'level', 'is_posting', 'is_active']);
-            // Example rows
-            fputcsv($output, ['4100', 'Warehousing Revenue', 'revenue', '', '2', '1', '1']);
-            fputcsv($output, ['4110', 'Pallet Storage Revenue', 'revenue', '4100', '3', '1', '1']);
+            // Example rows (6-digit XYYZZZ BIR-ready structure)
+            fputcsv($output, ['400000', 'Revenue', 'revenue', '', '1', '0', '1']);
+            fputcsv($output, ['410000', 'Service Revenue', 'revenue', '400000', '2', '0', '1']);
+            fputcsv($output, ['411000', 'Warehousing Revenue', 'revenue', '410000', '3', '1', '1']);
             fclose($output);
         };
 
@@ -380,7 +381,7 @@ class CoreAccountingController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="lfs_chart_of_accounts_export.csv"',
+            'Content-Disposition' => 'attachment; filename="fms_chart_of_accounts_export.csv"',
         ];
 
         $callback = function () {

@@ -30,9 +30,9 @@ class VendorInvoiceApprovedHandler implements FinancialEventHandlerInterface
 
         if ($lines === null) {
             $amount = (float) $payload['amount'];
-            $apCode = $payload['accounts_payable_account_code'] ?? '2100';
+            $apCode = $payload['accounts_payable_account_code'] ?? '211100';
             $accruedCode = $payload['accrued_liability_account_code'] ?? null;
-            $expenseCode = $payload['expense_account_code'] ?? '5200';
+            $expenseCode = $payload['expense_account_code'] ?? '530000';
 
             if ($accruedCode) {
                 $lines = [

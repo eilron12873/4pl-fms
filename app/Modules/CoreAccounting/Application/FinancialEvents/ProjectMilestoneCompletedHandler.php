@@ -30,8 +30,8 @@ class ProjectMilestoneCompletedHandler implements FinancialEventHandlerInterface
 
         if ($lines === null) {
             $amount = (float) $payload['amount'];
-            $receivableCode = $payload['receivable_account_code'] ?? '1200';
-            $revenueCode = $payload['revenue_account_code'] ?? '4100';
+            $receivableCode = $payload['receivable_account_code'] ?? '131000';
+            $revenueCode = $payload['revenue_account_code'] ?? '423000';
 
             $lines = [
                 [

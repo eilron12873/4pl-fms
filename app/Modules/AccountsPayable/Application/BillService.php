@@ -174,8 +174,8 @@ class BillService
         if ($bill->isIssued()) {
             return;
         }
-        $payableCode = $accountCodes['payable'] ?? '2100';
-        $expenseCode = $accountCodes['expense'] ?? '5200';
+        $payableCode = $accountCodes['payable'] ?? '211100';
+        $expenseCode = $accountCodes['expense'] ?? '530000';
         $total = (float) $bill->total;
 
         DB::transaction(function () use ($bill, $payableCode, $expenseCode, $total) {
@@ -283,8 +283,8 @@ class BillService
      */
     public function createCreditNote(ApBill $bill, float $amount, string $reason = '', array $accountCodes = []): ApBillAdjustment
     {
-        $payableCode = $accountCodes['payable'] ?? '2100';
-        $expenseCode = $accountCodes['expense'] ?? '5200';
+        $payableCode = $accountCodes['payable'] ?? '211100';
+        $expenseCode = $accountCodes['expense'] ?? '530000';
 
         return DB::transaction(function () use ($bill, $amount, $reason, $payableCode, $expenseCode) {
             $adjNumber = 'CN-' . $bill->bill_number . '-' . ($bill->adjustments()->count() + 1);

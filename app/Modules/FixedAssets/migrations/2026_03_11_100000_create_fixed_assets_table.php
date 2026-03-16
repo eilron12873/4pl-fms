@@ -18,9 +18,9 @@ return new class extends Migration
             $table->unsignedSmallInteger('useful_life_years');
             $table->decimal('residual_value', 15, 2)->default(0);
             $table->string('depreciation_method', 50)->default('straight_line');
-            $table->string('gl_asset_code', 20)->default('1300');
-            $table->string('gl_accum_depn_code', 20)->default('1320');
-            $table->string('gl_depn_expense_code', 20)->default('5400');
+            $table->string('gl_asset_code', 20)->default('152500');
+            $table->string('gl_accum_depn_code', 20)->default('153300');
+            $table->string('gl_depn_expense_code', 20)->default('651000');
             $table->string('status', 20)->default('active'); // active, disposed
             $table->string('location', 255)->nullable();
             $table->string('custodian', 255)->nullable();
