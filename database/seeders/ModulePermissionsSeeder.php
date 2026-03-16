@@ -30,6 +30,9 @@ class ModulePermissionsSeeder extends Seeder
             'reports.view',
             'integration.wms-billing', // WMS/integration layer can POST to wms-billing/feed
             'integration.financial-events', // API: POST /api/financial-events/{event_type}
+            // Ensure core accounting management permission exists even if module
+            // did not explicitly register it yet.
+            'core-accounting.manage',
         ];
 
         $permissions = array_values(array_unique(array_merge($permissions, $corePermissions)));

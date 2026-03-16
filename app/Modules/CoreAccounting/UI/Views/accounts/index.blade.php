@@ -1,4 +1,10 @@
 <x-app-layout>
+    @php
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+        $canManageCoa = $user && ($user->can('core-accounting.manage') || ($user->hasRole('Super Admin') ?? false));
+    @endphp
+
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
@@ -18,14 +24,14 @@
                         <p class="text-sm text-gray-600 dark:text-gray-300">
                             {{ __('Browse the logistics chart of accounts. Only finance admins can create, edit, deactivate, or bulk-import accounts.') }}
                         </p>
-                        @can('core-accounting.manage')
+                        @if($canManageCoa)
                             <a href="{{ route('core-accounting.accounts.create') }}"
                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600">
                                 {{ __('New Account') }}
                             </a>
-                        @endcan
+                        @endif
                     </div>
-                    @can('core-accounting.manage')
+                    @if($canManageCoa)
                         <p class="text-xs text-gray-500 dark:text-gray-400">
                             {{ __('Bulk Import COA: Download the CSV template, fill in code, name, type, level, and posting (parent codes first), then upload your file.') }}
                         </p>
@@ -45,7 +51,7 @@
                                 </button>
                             </form>
                         </div>
-                    @endcan
+                    @endif
                 </div>
                 <div class="p-4 overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -112,14 +118,14 @@
                         {{ $accounts->links() }}
                     </div>
                 @endif
-                @can('core-accounting.manage')
+                @if($canManageCoa)
                     <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-end">
                         <a href="{{ route('core-accounting.accounts.export') }}"
                            class="inline-flex items-center px-3 py-1.5 border text-sm font-medium rounded-md text-teal-700 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:text-teal-300 dark:border-teal-600">
                             {{ __('Export COA CSV') }}
                         </a>
                     </div>
-                @endcan
+                @endif
             </div>
         </div>
     </div>
