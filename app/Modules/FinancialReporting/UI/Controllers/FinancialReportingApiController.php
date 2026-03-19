@@ -9,11 +9,11 @@ use App\Modules\GeneralLedger\Application\ReportingService;
 use App\Modules\Treasury\Application\TreasuryService;
 use App\Modules\AccountsReceivable\Application\ArReportingService;
 use App\Modules\AccountsPayable\Application\ApReportingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
 
-class FinancialReportingController extends Controller
+class FinancialReportingApiController extends Controller
 {
     public function __construct(
         protected AdvancedReportingService $advancedReporting,
@@ -25,10 +25,6 @@ class FinancialReportingController extends Controller
 
     /**
      * Resolve date boundaries with optional `period` override governance.
-     *
-     * If `period` is provided it must exist in `periods.code` and overrides from/to.
-     * Otherwise, from/to are validated as dates and a strict range order is enforced
-     * when both are explicitly provided.
      *
      * @return array{fromDate: string, toDate: string}
      */
@@ -93,83 +89,94 @@ class FinancialReportingController extends Controller
         return ['dimension' => $dimension];
     }
 
-    public function index(): View
+    /**
+     * @return array<int, array{code: string, start_date: string, end_date: string}>
+     */
+    private function periodsPayload(): array
     {
-        return view('financial-reporting::index');
+        return Period::orderByDesc('start_date')
+            ->limit(24)
+            ->get(['code', 'start_date', 'end_date'])
+            ->map(fn (Period $p) => [
+                'code' => (string) $p->code,
+                'start_date' => $p->start_date?->toDateString() ?? '',
+                'end_date' => $p->end_date?->toDateString() ?? '',
+            ])
+            ->values()
+            ->all();
     }
 
-    public function managementReports(Request $request): View
+    public function managementReports(Request $request): JsonResponse
     {
         $resolved = $this->resolvePeriodOrFromToDates(
             $request,
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
-        $data = $this->advancedReporting->managementSummary($fromDate, $toDate);
-        $periods = Period::orderByDesc('start_date')->limit(24)->get();
 
-        return view('financial-reporting::management-reports', [
+        $data = $this->advancedReporting->managementSummary($resolved['fromDate'], $resolved['toDate']);
+
+        return response()->json([
+            'success' => true,
             'data' => $data,
-            'periods' => $periods,
+            'periods' => $this->periodsPayload(),
         ]);
     }
 
-    public function taxSummary(Request $request): View
+    public function taxSummary(Request $request): JsonResponse
     {
         $resolved = $this->resolvePeriodOrFromToDates(
             $request,
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
-        $data = $this->advancedReporting->taxSummary($fromDate, $toDate);
-        $periods = Period::orderByDesc('start_date')->limit(24)->get();
 
-        return view('financial-reporting::tax-summary', [
+        $data = $this->advancedReporting->taxSummary($resolved['fromDate'], $resolved['toDate']);
+
+        return response()->json([
+            'success' => true,
             'data' => $data,
-            'periods' => $periods,
+            'periods' => $this->periodsPayload(),
         ]);
     }
 
-    public function comparativeIncomeStatement(Request $request): View
+    public function comparativeIncomeStatement(Request $request): JsonResponse
     {
         $resolved = $this->resolvePeriodOrFromToDates(
             $request,
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
-        $data = $this->advancedReporting->comparativeIncomeStatement($fromDate, $toDate);
-        $periods = Period::orderByDesc('start_date')->limit(24)->get();
 
-        return view('financial-reporting::comparative-income-statement', [
+        $data = $this->advancedReporting->comparativeIncomeStatement($resolved['fromDate'], $resolved['toDate']);
+
+        return response()->json([
+            'success' => true,
             'data' => $data,
-            'periods' => $periods,
+            'periods' => $this->periodsPayload(),
         ]);
     }
 
-    public function managementPlByDimension(Request $request): View
+    public function managementPlByDimension(Request $request): JsonResponse
     {
         $resolved = $this->resolvePeriodOrFromToDates(
             $request,
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
         $dimension = $this->resolveDimension($request)['dimension'];
 
-        $data = $this->reporting->incomeStatementByDimension($dimension, $fromDate, $toDate);
+        $data = $this->reporting->incomeStatementByDimension($dimension, $resolved['fromDate'], $resolved['toDate']);
+
         // Deterministic ordering: rows must be stable across requests.
         $data['rows'] = collect($data['rows'] ?? [])
             ->sortBy(fn ($r) => (int) ($r['dimension_id'] ?? 0))
             ->values()
             ->all();
-        $data['section_labels'] = collect(config('gl_statements.income_statement', []))->pluck('label', 'key')->all();
+
+        $data['section_labels'] = collect(config('gl_statements.income_statement', []))
+            ->pluck('label', 'key')
+            ->all();
 
         $dimIds = collect($data['rows'] ?? [])->pluck('dimension_id')->unique();
         $labels = [];
@@ -191,56 +198,53 @@ class FinancialReportingController extends Controller
             }
         }
         $data['dimension_labels'] = $labels;
-        $periods = Period::orderByDesc('start_date')->limit(24)->get();
 
-        return view('financial-reporting::management-pl-dimension', [
+        return response()->json([
+            'success' => true,
             'data' => $data,
-            'periods' => $periods,
+            'periods' => $this->periodsPayload(),
         ]);
     }
 
-    public function plPerRevenue(Request $request): View
+    public function plPerRevenue(Request $request): JsonResponse
     {
         $resolved = $this->resolvePeriodOrFromToDates(
             $request,
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
-        $data = $this->reporting->plPerRevenue($fromDate, $toDate);
-        $periods = Period::orderByDesc('start_date')->limit(24)->get();
 
-        return view('financial-reporting::pl-per-revenue', [
+        $data = $this->reporting->plPerRevenue($resolved['fromDate'], $resolved['toDate']);
+
+        return response()->json([
+            'success' => true,
             'data' => $data,
-            'periods' => $periods,
+            'periods' => $this->periodsPayload(),
         ]);
     }
 
-    public function cashFlowAnalysis(Request $request): View
+    public function cashFlowAnalysis(Request $request): JsonResponse
     {
         $resolved = $this->resolvePeriodOrFromToDates(
             $request,
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
-        $glCashFlow = $this->reporting->cashFlowIndirect($fromDate, $toDate);
+
+        $glCashFlow = $this->reporting->cashFlowIndirect($resolved['fromDate'], $resolved['toDate']);
         $treasuryPosition = $this->treasury->cashPosition();
 
-        $periods = Period::orderByDesc('start_date')->limit(24)->get();
-
-        return view('financial-reporting::cash-flow-analysis', [
+        return response()->json([
+            'success' => true,
             'glCashFlow' => $glCashFlow,
             'treasuryPosition' => $treasuryPosition,
-            'from_date' => $fromDate,
-            'to_date' => $toDate,
-            'periods' => $periods,
+            'from_date' => $resolved['fromDate'],
+            'to_date' => $resolved['toDate'],
+            'periods' => $this->periodsPayload(),
         ]);
     }
 
-    public function kpiDashboard(Request $request): View
+    public function kpiDashboard(Request $request): JsonResponse
     {
         $asOfDate = $request->filled('as_of_date') ? $request->string('as_of_date')->toString() : now()->toDateString();
         $request->validate([
@@ -252,8 +256,6 @@ class FinancialReportingController extends Controller
             defaultFrom: now()->startOfMonth()->toDateString(),
             defaultTo: now()->toDateString(),
         );
-        $fromDate = $resolved['fromDate'];
-        $toDate = $resolved['toDate'];
 
         $arAging = $this->arReporting->agingReport($asOfDate);
         $apAging = $this->apReporting->agingReport($asOfDate);
@@ -271,7 +273,7 @@ class FinancialReportingController extends Controller
                 return $id1 <=> $id2;
             }
 
-            return $t2 <=> $t1; // total desc
+            return $t2 <=> $t1;
         });
         $arAging = collect($arAgingRows)->values();
 
@@ -287,19 +289,16 @@ class FinancialReportingController extends Controller
                 return $id1 <=> $id2;
             }
 
-            return $t2 <=> $t1; // total desc
+            return $t2 <=> $t1;
         });
         $apAging = collect($apAgingRows)->values();
 
-        $arTotal = $arAging->sum('total');
-        $apTotal = $apAging->sum('total');
+        $arTotal = round((float) $arAging->sum('total'), 2);
+        $apTotal = round((float) $apAging->sum('total'), 2);
 
         $epsilon = 0.0000001;
-        $arTotal = round((float) $arTotal, 2);
-        $apTotal = round((float) $apTotal, 2);
-
-        $days = max(1, \Carbon\Carbon::parse($fromDate)->diffInDays(\Carbon\Carbon::parse($toDate)) + 1);
-        $comparative = $this->advancedReporting->comparativeIncomeStatement($fromDate, $toDate);
+        $days = max(1, \Carbon\Carbon::parse($resolved['fromDate'])->diffInDays(\Carbon\Carbon::parse($resolved['toDate'])) + 1);
+        $comparative = $this->advancedReporting->comparativeIncomeStatement($resolved['fromDate'], $resolved['toDate']);
 
         // Performance guardrail: reuse comparative totals instead of calling incomeStatement() again.
         $revenueForPeriod = (float) ($comparative['total_revenue_current'] ?? 0);
@@ -319,7 +318,8 @@ class FinancialReportingController extends Controller
             ? round($marginPctCurrent - $marginPctPrior, 2)
             : null;
 
-        return view('financial-reporting::kpi-dashboard', [
+        return response()->json([
+            'success' => true,
             'arAging' => $arAging,
             'apAging' => $apAging,
             'arTotal' => $arTotal,
@@ -328,8 +328,9 @@ class FinancialReportingController extends Controller
             'marginVariancePct' => $marginVariancePct,
             'marginPctCurrent' => $marginPctCurrent,
             'asOfDate' => $asOfDate,
-            'fromDate' => $fromDate,
-            'toDate' => $toDate,
+            'fromDate' => $resolved['fromDate'],
+            'toDate' => $resolved['toDate'],
         ]);
     }
 }
+

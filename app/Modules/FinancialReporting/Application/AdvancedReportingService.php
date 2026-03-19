@@ -24,26 +24,40 @@ class AdvancedReportingService
         $ytdIs = $this->reporting->incomeStatement($yearStart, $toDate);
         $ytdNetIncome = $ytdIs['net_income'];
 
-        $totalRevenue = (float) ($is['total_revenue'] ?? 0);
-        $costOfRevenue = 0;
-        foreach ($is['sections'] ?? [] as $section) {
+        $sections = collect($is['sections'] ?? [])
+            ->map(fn (array $s) => [
+                'key' => $s['key'] ?? '',
+                'label' => $s['label'] ?? '',
+                'amount' => round((float) ($s['amount'] ?? 0), 2),
+            ])
+            ->values()
+            ->all();
+
+        $totalRevenue = round((float) ($is['total_revenue'] ?? 0), 2);
+        $totalExpense = round((float) ($is['total_expense'] ?? 0), 2);
+        $netIncome = round((float) ($is['net_income'] ?? 0), 2);
+
+        $costOfRevenue = 0.0;
+        foreach ($sections as $section) {
             if (($section['key'] ?? '') === 'cost_of_revenue') {
                 $costOfRevenue = abs((float) ($section['amount'] ?? 0));
                 break;
             }
         }
-        $grossMarginPct = $totalRevenue > 0
+
+        $epsilon = 0.0000001;
+        $grossMarginPct = abs($totalRevenue) > $epsilon
             ? round((($totalRevenue - $costOfRevenue) / $totalRevenue) * 100, 2)
             : null;
 
         return [
-            'sections' => $is['sections'] ?? [],
+            'sections' => $sections,
             'total_revenue' => $totalRevenue,
-            'total_expense' => (float) ($is['total_expense'] ?? 0),
-            'net_income' => (float) ($is['net_income'] ?? 0),
+            'total_expense' => $totalExpense,
+            'net_income' => $netIncome,
             'from_date' => $fromDate,
             'to_date' => $toDate,
-            'ytd_net_income' => (float) $ytdNetIncome,
+            'ytd_net_income' => round((float) $ytdNetIncome, 2),
             'gross_margin_pct' => $grossMarginPct,
         ];
     }
@@ -69,7 +83,14 @@ class AdvancedReportingService
 
         $currentSections = collect($current['sections'] ?? [])->keyBy('key');
         $priorSections = collect($prior['sections'] ?? [])->keyBy('key');
-        $keys = $currentSections->keys()->merge($priorSections->keys())->unique();
+        $presentKeys = $currentSections->keys()->merge($priorSections->keys())->unique();
+
+        // Deterministic ordering: honor configured income statement section order first,
+        // then append any unexpected keys (sorted) to keep output stable.
+        $allowedKeys = collect(config('gl_statements.income_statement', []))->pluck('key')->values();
+        $orderedKeys = $allowedKeys->filter(fn ($k) => $presentKeys->contains($k))->values();
+        $unknownKeys = $presentKeys->diff($orderedKeys)->sort()->values();
+        $keys = $orderedKeys->merge($unknownKeys)->values();
 
         $rows = [];
         foreach ($keys as $key) {
@@ -79,14 +100,16 @@ class AdvancedReportingService
             $curAmt = (float) ($cur['amount'] ?? 0);
             $prAmt = (float) ($pr['amount'] ?? 0);
             $variance = $curAmt - $prAmt;
-            $variancePct = $prAmt != 0 ? round(($variance / abs($prAmt)) * 100, 2) : null;
+
+            $epsilon = 0.0000001;
+            $variancePct = abs($prAmt) > $epsilon ? round(($variance / abs($prAmt)) * 100, 2) : null;
 
             $rows[] = [
                 'key' => $key,
                 'label' => $label,
-                'current' => $curAmt,
-                'prior' => $prAmt,
-                'variance' => $variance,
+                'current' => round($curAmt, 2),
+                'prior' => round($prAmt, 2),
+                'variance' => round($variance, 2),
                 'variance_pct' => $variancePct,
             ];
         }
@@ -99,12 +122,12 @@ class AdvancedReportingService
             'to_date' => $toDate,
             'prior_from_date' => $priorFromStr,
             'prior_to_date' => $priorToStr,
-            'total_revenue_current' => (float) ($current['total_revenue'] ?? 0),
-            'total_revenue_prior' => (float) ($prior['total_revenue'] ?? 0),
-            'total_expense_current' => (float) ($current['total_expense'] ?? 0),
-            'total_expense_prior' => (float) ($prior['total_expense'] ?? 0),
-            'net_income_current' => (float) ($current['net_income'] ?? 0),
-            'net_income_prior' => (float) ($prior['net_income'] ?? 0),
+            'total_revenue_current' => round((float) ($current['total_revenue'] ?? 0), 2),
+            'total_revenue_prior' => round((float) ($prior['total_revenue'] ?? 0), 2),
+            'total_expense_current' => round((float) ($current['total_expense'] ?? 0), 2),
+            'total_expense_prior' => round((float) ($prior['total_expense'] ?? 0), 2),
+            'net_income_current' => round((float) ($current['net_income'] ?? 0), 2),
+            'net_income_prior' => round((float) ($prior['net_income'] ?? 0), 2),
         ];
     }
 
@@ -119,7 +142,7 @@ class AdvancedReportingService
 
         $sections = [];
         foreach ($is['sections'] ?? [] as $section) {
-            $amount = (float) ($section['amount'] ?? 0);
+            $amount = round((float) ($section['amount'] ?? 0), 2);
             $sections[] = [
                 'key' => $section['key'],
                 'label' => $section['label'],
@@ -130,9 +153,9 @@ class AdvancedReportingService
 
         return [
             'sections' => $sections,
-            'total_revenue' => (float) ($is['total_revenue'] ?? 0),
-            'total_expense' => (float) ($is['total_expense'] ?? 0),
-            'net_income' => (float) ($is['net_income'] ?? 0),
+            'total_revenue' => round((float) ($is['total_revenue'] ?? 0), 2),
+            'total_expense' => round((float) ($is['total_expense'] ?? 0), 2),
+            'net_income' => round((float) ($is['net_income'] ?? 0), 2),
             'from_date' => $fromDate,
             'to_date' => $toDate,
         ];
