@@ -9,6 +9,7 @@ use App\Modules\CoreAccounting\Application\FinancialEventDispatcher;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -99,3 +100,5 @@ Artisan::command('ap:e2e', function () {
     $this->info('AP e2e completed. Check UI: bills, statement, aging, payments.');
     return 0;
 })->purpose('Run AP end-to-end: vendor, vendor-invoice-approved event, issue bill, payment, statement & aging');
+
+Schedule::command('costing:snapshots')->dailyAt('01:00');

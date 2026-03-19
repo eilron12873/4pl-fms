@@ -49,6 +49,15 @@
                 </span>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Configure cost allocation rules (future).') }}</p>
             </a>
+            @can('costing-engine.manage')
+                <a href="{{ route('costing-engine.settings') }}" class="block p-6 bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 transition">
+                    <span class="flex items-center gap-3 text-gray-900 dark:text-gray-100 font-medium">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"><i class="fas fa-cogs"></i></span>
+                        {{ __('Costing Settings') }}
+                    </span>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Configure revenue/cost mappings, dimensions, and functional currency.') }}</p>
+                </a>
+            @endcan
         </div>
     </div>
 </x-app-layout>

@@ -17,7 +17,9 @@
                     <input type="date" id="to_date" name="to_date" value="{{ $toDate ?? '' }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                 </div>
                 <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Apply') }}</button>
+                <a href="{{ route('costing-engine.export', ['report' => 'route', 'from_date' => $fromDate, 'to_date' => $toDate]) }}" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Export CSV') }}</a>
             </form>
+            <p class="mt-2 text-xs text-gray-500">{{ __('Data source: posted journal lines. Currency: :ccy', ['ccy' => $functionalCurrency]) }}</p>
         </div>
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-4 overflow-x-auto">
@@ -34,7 +36,9 @@
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($rows as $r)
                             <tr>
-                                <td class="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{{ $r['route_id'] }}</td>
+                                <td class="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">
+                                    <a href="{{ route('costing-engine.details', ['dimension' => 'route_id', 'id' => $r['route_id'], 'from_date' => $fromDate, 'to_date' => $toDate]) }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ $r['route_id'] }}</a>
+                                </td>
                                 <td class="px-4 py-2 text-right">{{ number_format($r['revenue'], 2) }}</td>
                                 <td class="px-4 py-2 text-right">{{ number_format($r['cost'], 2) }}</td>
                                 <td class="px-4 py-2 text-right {{ $r['margin'] >= 0 ? '' : 'text-red-600 dark:text-red-400' }}">{{ number_format($r['margin'], 2) }}</td>

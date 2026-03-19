@@ -3,33 +3,21 @@
 namespace App\Modules\CostingEngine\Application;
 
 use App\Modules\BillingEngine\Infrastructure\Models\BillingClient;
-use App\Modules\CoreAccounting\Infrastructure\Models\Account;
-use App\Modules\CoreAccounting\Infrastructure\Models\JournalLine;
 use App\Modules\CostingEngine\Infrastructure\Repositories\CostingEngineRepository;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class ProfitabilityService
 {
     public function __construct(
-        protected CostingEngineRepository $repository
-    ) {}
+        protected CostingEngineRepository $repository,
+        protected CostingConfigService $configService,
+    ) {
+    }
 
     /**
      * Revenue account code prefixes (41-46 from gl_statements income_statement).
      */
-    protected function revenueAccountPrefixes(): array
-    {
-        return ['41', '42', '43', '44', '45', '46'];
-    }
-
-    /**
-     * Expense account code prefixes (51-57).
-     */
-    protected function expenseAccountPrefixes(): array
-    {
-        return ['51', '52', '53', '54', '55', '56', '57'];
-    }
-
     /**
      * Client profitability: revenue from AR invoices (issued/paid), cost from GL expense lines with client_id.
      *
@@ -37,29 +25,33 @@ class ProfitabilityService
      */
     public function clientProfitability(?string $fromDate = null, ?string $toDate = null): Collection
     {
-        $revenueByClient = $this->repository->revenueByClientFromInvoices($fromDate, $toDate);
-        $costByClient = $this->repository->costByClientFromJournalLines($fromDate, $toDate);
+        $cacheKey = $this->cacheKey('client', $fromDate, $toDate);
+        return Cache::remember($cacheKey, 300, function () use ($fromDate, $toDate) {
+            $revenueByClient = $this->repository->revenueByClientFromInvoices($fromDate, $toDate);
+            $costByClient = $this->repository->costByClientFromJournalLines($fromDate, $toDate);
 
-        $clientIds = $revenueByClient->keys()->merge($costByClient->keys())->unique();
-        $clients = BillingClient::whereIn('id', $clientIds)->get()->keyBy('id');
+            $clientIds = $revenueByClient->keys()->merge($costByClient->keys())->unique();
+            $clients = BillingClient::whereIn('id', $clientIds)->get()->keyBy('id');
 
-        return $clientIds->map(function ($clientId) use ($clients, $revenueByClient, $costByClient) {
-            $client = $clients->get($clientId);
-            $revenue = (float) ($revenueByClient->get($clientId) ?? 0);
-            $cost = (float) ($costByClient->get($clientId) ?? 0);
-            $margin = $revenue - $cost;
-            $marginPct = $revenue > 0 ? round($margin / $revenue * 100, 2) : null;
+            return $clientIds->map(function ($clientId) use ($clients, $revenueByClient, $costByClient) {
+                $client = $clients->get($clientId);
+                $revenue = (float) ($revenueByClient->get($clientId) ?? 0);
+                $cost = (float) ($costByClient->get($clientId) ?? 0);
+                $margin = $revenue - $cost;
+                $marginPct = $revenue > 0 ? round($margin / $revenue * 100, 2) : null;
 
-            return [
-                'client_id' => $clientId,
-                'client_name' => $client?->name ?? (string) $clientId,
-                'client_code' => $client?->code ?? '',
-                'revenue' => $revenue,
-                'cost' => $cost,
-                'margin' => $margin,
-                'margin_pct' => $marginPct,
-            ];
-        })->sortByDesc('margin')->values();
+                return [
+                    'client_id' => $clientId,
+                    'client_name' => $client?->name ?? (string) $clientId,
+                    'client_code' => $client?->code ?? '',
+                    'revenue' => $this->normalizeCurrency($revenue, $client?->currency ?? null),
+                    'cost' => $this->normalizeCurrency($cost, $client?->currency ?? null),
+                    'margin' => $this->normalizeCurrency($margin, $client?->currency ?? null),
+                    'margin_pct' => $marginPct,
+                    'currency' => $this->configService->functionalCurrency(),
+                ];
+            })->sortByDesc('margin')->values();
+        });
     }
 
     /**
@@ -69,28 +61,32 @@ class ProfitabilityService
      */
     public function warehouseProfitability(?string $fromDate = null, ?string $toDate = null): Collection
     {
-        $rows = $this->repository->revenueAndCostByDimension('warehouse_id', $fromDate, $toDate);
-        $warehouseIds = $rows->pluck('warehouse_id')->filter()->unique();
-        $warehouses = \App\Modules\InventoryValuation\Infrastructure\Models\Warehouse::whereIn('id', $warehouseIds)->get()->keyBy('id');
+        $cacheKey = $this->cacheKey('warehouse', $fromDate, $toDate);
+        return Cache::remember($cacheKey, 300, function () use ($fromDate, $toDate) {
+            $rows = $this->repository->revenueAndCostByDimension('warehouse_id', $fromDate, $toDate);
+            $warehouseIds = $rows->pluck('warehouse_id')->filter()->unique();
+            $warehouses = \App\Modules\InventoryValuation\Infrastructure\Models\Warehouse::whereIn('id', $warehouseIds)->get()->keyBy('id');
 
-        return $rows->map(function ($row) use ($warehouses) {
-            $wid = $row['warehouse_id'];
-            $w = $warehouses->get($wid);
-            $revenue = (float) ($row['revenue'] ?? 0);
-            $cost = (float) ($row['cost'] ?? 0);
-            $margin = $revenue - $cost;
-            $marginPct = $revenue > 0 ? round($margin / $revenue * 100, 2) : null;
+            return $rows->map(function ($row) use ($warehouses) {
+                $wid = $row['warehouse_id'];
+                $w = $warehouses->get($wid);
+                $revenue = (float) ($row['revenue'] ?? 0);
+                $cost = (float) ($row['cost'] ?? 0);
+                $margin = $revenue - $cost;
+                $marginPct = $revenue > 0 ? round($margin / $revenue * 100, 2) : null;
 
-            return [
-                'warehouse_id' => $wid,
-                'warehouse_code' => $w?->code ?? (string) $wid,
-                'warehouse_name' => $w?->name ?? (string) $wid,
-                'revenue' => $revenue,
-                'cost' => $cost,
-                'margin' => $margin,
-                'margin_pct' => $marginPct,
-            ];
-        })->sortByDesc('margin')->values();
+                return [
+                    'warehouse_id' => $wid,
+                    'warehouse_code' => $w?->code ?? (string) $wid,
+                    'warehouse_name' => $w?->name ?? (string) $wid,
+                    'revenue' => $this->normalizeCurrency($revenue),
+                    'cost' => $this->normalizeCurrency($cost),
+                    'margin' => $this->normalizeCurrency($margin),
+                    'margin_pct' => $marginPct,
+                    'currency' => $this->configService->functionalCurrency(),
+                ];
+            })->sortByDesc('margin')->values();
+        });
     }
 
     /**
@@ -100,7 +96,7 @@ class ProfitabilityService
      */
     public function shipmentProfitability(?string $fromDate = null, ?string $toDate = null): Collection
     {
-        return $this->repository->revenueAndCostByDimension('shipment_id', $fromDate, $toDate)
+        return Cache::remember($this->cacheKey('shipment', $fromDate, $toDate), 300, fn () => $this->repository->revenueAndCostByDimension('shipment_id', $fromDate, $toDate)
             ->map(function ($row) {
                 $revenue = (float) ($row['revenue'] ?? 0);
                 $cost = (float) ($row['cost'] ?? 0);
@@ -109,12 +105,13 @@ class ProfitabilityService
 
                 return [
                     'shipment_id' => $row['shipment_id'],
-                    'revenue' => $revenue,
-                    'cost' => $cost,
-                    'margin' => $margin,
+                    'revenue' => $this->normalizeCurrency($revenue),
+                    'cost' => $this->normalizeCurrency($cost),
+                    'margin' => $this->normalizeCurrency($margin),
                     'margin_pct' => $marginPct,
+                    'currency' => $this->configService->functionalCurrency(),
                 ];
-            })->sortByDesc('margin')->values();
+            })->sortByDesc('margin')->values());
     }
 
     /**
@@ -124,7 +121,7 @@ class ProfitabilityService
      */
     public function routeProfitability(?string $fromDate = null, ?string $toDate = null): Collection
     {
-        return $this->repository->revenueAndCostByDimension('route_id', $fromDate, $toDate)
+        return Cache::remember($this->cacheKey('route', $fromDate, $toDate), 300, fn () => $this->repository->revenueAndCostByDimension('route_id', $fromDate, $toDate)
             ->map(function ($row) {
                 $revenue = (float) ($row['revenue'] ?? 0);
                 $cost = (float) ($row['cost'] ?? 0);
@@ -133,12 +130,13 @@ class ProfitabilityService
 
                 return [
                     'route_id' => $row['route_id'],
-                    'revenue' => $revenue,
-                    'cost' => $cost,
-                    'margin' => $margin,
+                    'revenue' => $this->normalizeCurrency($revenue),
+                    'cost' => $this->normalizeCurrency($cost),
+                    'margin' => $this->normalizeCurrency($margin),
                     'margin_pct' => $marginPct,
+                    'currency' => $this->configService->functionalCurrency(),
                 ];
-            })->sortByDesc('margin')->values();
+            })->sortByDesc('margin')->values());
     }
 
     /**
@@ -148,7 +146,7 @@ class ProfitabilityService
      */
     public function projectProfitability(?string $fromDate = null, ?string $toDate = null): Collection
     {
-        return $this->repository->revenueAndCostByDimension('project_id', $fromDate, $toDate)
+        return Cache::remember($this->cacheKey('project', $fromDate, $toDate), 300, fn () => $this->repository->revenueAndCostByDimension('project_id', $fromDate, $toDate)
             ->map(function ($row) {
                 $revenue = (float) ($row['revenue'] ?? 0);
                 $cost = (float) ($row['cost'] ?? 0);
@@ -157,11 +155,47 @@ class ProfitabilityService
 
                 return [
                     'project_id' => $row['project_id'],
-                    'revenue' => $revenue,
-                    'cost' => $cost,
-                    'margin' => $margin,
+                    'revenue' => $this->normalizeCurrency($revenue),
+                    'cost' => $this->normalizeCurrency($cost),
+                    'margin' => $this->normalizeCurrency($margin),
                     'margin_pct' => $marginPct,
+                    'currency' => $this->configService->functionalCurrency(),
                 ];
-            })->sortByDesc('margin')->values();
+            })->sortByDesc('margin')->values());
+    }
+
+    public function detailsByDimension(string $dimension, int|string $id, ?string $fromDate = null, ?string $toDate = null): array
+    {
+        $journalLines = $this->repository->journalLinesByDimension($dimension, $id, $fromDate, $toDate);
+        $invoices = $dimension === 'client_id'
+            ? $this->repository->arInvoicesByClient($id, $fromDate, $toDate)
+            : collect();
+
+        return [
+            'journal_lines' => $journalLines,
+            'invoices' => $invoices,
+        ];
+    }
+
+    private function cacheKey(string $dimension, ?string $fromDate, ?string $toDate): string
+    {
+        return sprintf('costing:%s:%s:%s:%s', $dimension, $fromDate ?: 'all', $toDate ?: 'all', $this->configService->functionalCurrency());
+    }
+
+    private function normalizeCurrency(float $amount, ?string $sourceCurrency = null): float
+    {
+        $source = strtoupper((string) ($sourceCurrency ?: $this->configService->functionalCurrency()));
+        $target = $this->configService->functionalCurrency();
+        if ($source === $target) {
+            return round($amount, 2);
+        }
+        $rates = $this->configService->fxRates();
+        $sourceRate = (float) ($rates[$source] ?? 1.0);
+        $targetRate = (float) ($rates[$target] ?? 1.0);
+        if ($sourceRate <= 0 || $targetRate <= 0) {
+            return round($amount, 2);
+        }
+        $usdBase = $amount / $sourceRate;
+        return round($usdBase * $targetRate, 2);
     }
 }

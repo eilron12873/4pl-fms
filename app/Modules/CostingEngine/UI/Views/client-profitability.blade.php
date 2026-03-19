@@ -17,7 +17,17 @@
                     <input type="date" id="to_date" name="to_date" value="{{ $toDate ?? '' }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                 </div>
                 <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Apply') }}</button>
+                <a href="{{ route('costing-engine.export', ['report' => 'client', 'from_date' => $fromDate, 'to_date' => $toDate]) }}" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Export CSV') }}</a>
             </form>
+            <form method="POST" action="{{ route('costing-engine.presets.store') }}" class="mt-3 flex gap-2 items-end">
+                @csrf
+                <input type="hidden" name="report_key" value="client">
+                <input type="hidden" name="from_date" value="{{ $fromDate }}">
+                <input type="hidden" name="to_date" value="{{ $toDate }}">
+                <input type="text" name="name" placeholder="{{ __('Preset name') }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
+                <button type="submit" class="inline-flex px-3 py-2 rounded-md bg-emerald-600 text-white text-sm hover:bg-emerald-700">{{ __('Save preset') }}</button>
+            </form>
+            <p class="mt-2 text-xs text-gray-500">{{ __('Data source: AR issued invoices + posted journal lines. Currency: :ccy', ['ccy' => $functionalCurrency]) }}</p>
         </div>
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-4 overflow-x-auto">
@@ -35,7 +45,9 @@
                         @forelse($rows as $r)
                             <tr>
                                 <td class="px-4 py-2">
-                                    <span class="font-medium text-gray-900 dark:text-gray-100">{{ $r['client_code'] ? $r['client_code'] . ' - ' : '' }}{{ $r['client_name'] }}</span>
+                                    <a href="{{ route('costing-engine.details', ['dimension' => 'client_id', 'id' => $r['client_id'], 'from_date' => $fromDate, 'to_date' => $toDate]) }}" class="font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                        {{ $r['client_code'] ? $r['client_code'] . ' - ' : '' }}{{ $r['client_name'] }}
+                                    </a>
                                 </td>
                                 <td class="px-4 py-2 text-right">{{ number_format($r['revenue'], 2) }}</td>
                                 <td class="px-4 py-2 text-right">{{ number_format($r['cost'], 2) }}</td>

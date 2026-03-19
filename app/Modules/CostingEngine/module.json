@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "description": "Costing Engine module for LFS",
     "permissions": [
-        "costing-engine.view"
+        "costing-engine.view",
+        "costing-engine.manage"
     ],
     "nav": {
         "label": "Costing Engine",
