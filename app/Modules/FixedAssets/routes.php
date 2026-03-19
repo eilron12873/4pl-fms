@@ -14,6 +14,12 @@ Route::middleware(['auth', 'verified', 'permission:fixed-assets.view'])
         Route::post('/assets', [FixedAssetsController::class, 'assetStore'])->name('assets.store')->middleware('permission:fixed-assets.manage');
         Route::get('/assets/{id}', [FixedAssetsController::class, 'assetShow'])->name('assets.show')->whereNumber('id');
 
+        // Disposal
+        Route::get('/assets/{id}/dispose', [FixedAssetsController::class, 'assetDispose'])->name('assets.dispose')
+            ->whereNumber('id')->middleware('permission:fixed-assets.manage');
+        Route::post('/assets/{id}/dispose', [FixedAssetsController::class, 'assetDisposeStore'])->name('assets.dispose.store')
+            ->whereNumber('id')->middleware('permission:fixed-assets.manage');
+
         Route::get('/depreciation', [FixedAssetsController::class, 'depreciation'])->name('depreciation.index');
         Route::get('/depreciation/schedule', [FixedAssetsController::class, 'depreciationSchedule'])->name('depreciation.schedule');
         Route::get('/depreciation/history', [FixedAssetsController::class, 'depreciationHistory'])->name('depreciation.history');

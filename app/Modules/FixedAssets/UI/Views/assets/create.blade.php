@@ -52,6 +52,21 @@
                         @error('residual_value')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                     <div>
+                        <label for="gl_disposal_proceeds_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('GL disposal proceeds code') }}</label>
+                        <input type="text" id="gl_disposal_proceeds_code" name="gl_disposal_proceeds_code" value="{{ old('gl_disposal_proceeds_code') }}" maxlength="20" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        @error('gl_disposal_proceeds_code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="gl_disposal_gain_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('GL disposal gain code') }}</label>
+                        <input type="text" id="gl_disposal_gain_code" name="gl_disposal_gain_code" value="{{ old('gl_disposal_gain_code') }}" maxlength="20" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        @error('gl_disposal_gain_code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="gl_disposal_loss_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('GL disposal loss code') }}</label>
+                        <input type="text" id="gl_disposal_loss_code" name="gl_disposal_loss_code" value="{{ old('gl_disposal_loss_code') }}" maxlength="20" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        @error('gl_disposal_loss_code')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
                         <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Location') }}</label>
                         <input type="text" id="location" name="location" value="{{ old('location') }}" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                         @error('location')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror

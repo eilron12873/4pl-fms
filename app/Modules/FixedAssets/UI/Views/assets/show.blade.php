@@ -6,6 +6,15 @@
         </div>
     </x-slot>
     <div class="py-4 max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        @can('fixed-assets.manage')
+            @if($asset->status === 'active')
+                <div class="flex justify-end">
+                    <a href="{{ route('fixed-assets.assets.dispose', $asset->id) }}" class="inline-flex items-center px-4 py-2 rounded-md bg-amber-600 text-white text-sm font-medium hover:bg-amber-700">
+                        {{ __('Dispose asset') }}
+                    </a>
+                </div>
+            @endif
+        @endcan
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Type') }}</dt><dd class="font-medium">{{ ucfirst($asset->asset_type) }}</dd></div>
@@ -17,6 +26,9 @@
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Net book value') }}</dt><dd class="font-medium">{{ number_format($asset->bookValue(), 2) }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Last depreciation') }}</dt><dd class="font-medium">{{ $asset->last_depreciation_at ? $asset->last_depreciation_at->format('Y-m-d') : '-' }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Status') }}</dt><dd class="font-medium"><span class="px-2 py-0.5 rounded text-xs {{ $asset->status === 'active' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-200 dark:bg-gray-600' }}">{{ $asset->status }}</span></dd></div>
+                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Disposal proceeds GL') }}</dt><dd class="font-mono">{{ $asset->gl_disposal_proceeds_code ?? '-' }}</dd></div>
+                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Disposal gain GL') }}</dt><dd class="font-mono">{{ $asset->gl_disposal_gain_code ?? '-' }}</dd></div>
+                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Disposal loss GL') }}</dt><dd class="font-mono">{{ $asset->gl_disposal_loss_code ?? '-' }}</dd></div>
                 @if($asset->location)<div><dt class="text-gray-500 dark:text-gray-400">{{ __('Location') }}</dt><dd class="font-medium">{{ $asset->location }}</dd></div>@endif
                 @if($asset->custodian)<div><dt class="text-gray-500 dark:text-gray-400">{{ __('Custodian') }}</dt><dd class="font-medium">{{ $asset->custodian }}</dd></div>@endif
             </dl>
