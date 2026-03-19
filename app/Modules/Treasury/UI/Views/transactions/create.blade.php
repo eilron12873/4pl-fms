@@ -32,13 +32,36 @@
                         <div>
                             <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Amount') }} *</label>
                             <input type="number" id="amount" name="amount" step="0.01" value="{{ old('amount') }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                            <p class="mt-1 text-xs text-gray-500">{{ __('Use positive for deposit, negative for withdrawal') }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ __('Deposit: positive · Withdrawal/Fee: negative · Transfer: positive (origin decreases, destination increases)') }}</p>
                             @error('amount')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         </div>
                         <div>
                             <label for="reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Reference') }}</label>
                             <input type="text" id="reference" name="reference" value="{{ old('reference') }}" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                         </div>
+                    </div>
+                    <div class="mt-2">
+                        <label for="counterparty_gl_account_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Counterparty GL code (optional)') }}</label>
+                        <input type="text"
+                               id="counterparty_gl_account_code"
+                               name="counterparty_gl_account_code"
+                               value="{{ old('counterparty_gl_account_code') }}"
+                               maxlength="20"
+                               class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        <p class="mt-1 text-xs text-gray-500">{{ __('Overrides the system default mapping for deposit/withdrawal/fee/adjustment journals.') }}</p>
+                    </div>
+                    <div class="mt-4">
+                        <label for="destination_bank_account_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Destination bank account') }} *</label>
+                        <select id="destination_bank_account_id" name="destination_bank_account_id"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <option value="">{{ __('Select destination (required for transfers)') }}</option>
+                            @foreach($destinationAccounts as $a)
+                                <option value="{{ $a->id }}" {{ old('destination_bank_account_id') == $a->id ? 'selected' : '' }} {{ $a->id == $account->id ? 'disabled' : '' }}>
+                                    {{ $a->name }} ({{ $a->currency }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('destination_bank_account_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </div>
                 <div class="mt-6 flex gap-2">

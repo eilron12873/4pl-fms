@@ -20,6 +20,8 @@ class BankTransaction extends Model
         'source_type',
         'source_id',
         'reconciled_at',
+        'idempotency_key',
+        'transfer_group_reference',
     ];
 
     protected $casts = [
