@@ -173,7 +173,19 @@ class ProcurementController extends Controller
     public function purchaseOrderShow(int $id): View
     {
         $order = PurchaseOrder::with(['vendor', 'lines', 'purchaseRequest'])->findOrFail($id);
-        return view('procurement::purchase-orders.show', compact('order'));
+
+        // Aggregate billed amounts against this P.O. using AP bill lines.
+        $billedTotal = \App\Modules\AccountsPayable\Infrastructure\Models\ApBillLine::whereHas('bill', function ($q) use ($order) {
+            $q->where('purchase_order_id', $order->id);
+        })->sum('amount');
+
+        $poVariance = [
+            'po_total' => (float) ($order->total ?? 0),
+            'billed_total' => (float) $billedTotal,
+            'remaining' => (float) ($order->total ?? 0) - (float) $billedTotal,
+        ];
+
+        return view('procurement::purchase-orders.show', compact('order', 'poVariance'));
     }
 
     public function purchaseOrderIssue(int $id): RedirectResponse

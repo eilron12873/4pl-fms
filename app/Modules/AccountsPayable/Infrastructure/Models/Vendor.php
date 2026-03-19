@@ -9,9 +9,24 @@ class Vendor extends Model
 {
     protected $table = 'vendors';
 
-    protected $fillable = ['code', 'name', 'currency', 'payment_terms_days', 'is_active', 'notes'];
+    protected $fillable = [
+        'code',
+        'name',
+        'category',
+        'tax_id',
+        'currency',
+        'payment_terms_days',
+        'is_active',
+        'notes',
+        'bank_name',
+        'bank_account_number',
+        'bank_swift_code',
+        'preferred_payment_method',
+    ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function bills(): HasMany
     {

@@ -61,7 +61,12 @@
                             <tbody id="lines-tbody">
                                 @foreach(old('lines', $presetLines ?? [['description' => '', 'amount' => '']]) as $i => $line)
                                 <tr class="line-row">
-                                    <td class="px-4 py-2"><input type="text" name="lines[{{ $i }}][description]" value="{{ $line['description'] ?? '' }}" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm" placeholder="{{ __('Description') }}"></td>
+                                    <td class="px-4 py-2">
+                                        <input type="text" name="lines[{{ $i }}][description]" value="{{ $line['description'] ?? '' }}" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm" placeholder="{{ __('Description') }}">
+                                        @if(!empty($line['purchase_order_line_id']))
+                                            <input type="hidden" name="lines[{{ $i }}][purchase_order_line_id]" value="{{ $line['purchase_order_line_id'] }}">
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-2"><input type="number" name="lines[{{ $i }}][amount]" value="{{ $line['amount'] ?? '' }}" step="0.01" min="0" class="w-full text-right rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm" placeholder="0.00"></td>
                                     <td class="px-4 py-2"><button type="button" class="remove-line text-red-600 hover:text-red-800 text-sm">{{ __('Remove') }}</button></td>
                                 </tr>

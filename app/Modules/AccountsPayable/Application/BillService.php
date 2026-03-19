@@ -117,6 +117,7 @@ class BillService
                     'unit_price' => $amount,
                     'amount' => $amount,
                     'vendor_id' => $vendorId,
+                    'purchase_order_line_id' => isset($line['purchase_order_line_id']) ? (int) $line['purchase_order_line_id'] : null,
                 ]);
             }
 
@@ -130,8 +131,8 @@ class BillService
      */
     public function updateDraftBill(ApBill $bill, array $input): ApBill
     {
-        if ($bill->isIssued()) {
-            throw new \InvalidArgumentException('Cannot edit an issued bill.');
+        if ($bill->status !== 'draft') {
+            throw new \InvalidArgumentException('Only draft bills can be edited.');
         }
 
         return DB::transaction(function () use ($bill, $input) {
@@ -161,6 +162,7 @@ class BillService
                     'unit_price' => $amount,
                     'amount' => $amount,
                     'vendor_id' => $vendorId,
+                    'purchase_order_line_id' => isset($line['purchase_order_line_id']) ? (int) $line['purchase_order_line_id'] : null,
                 ]);
             }
 
@@ -173,6 +175,9 @@ class BillService
     {
         if ($bill->isIssued()) {
             return;
+        }
+        if (! $bill->isApproved()) {
+            throw new \InvalidArgumentException('Only approved bills can be issued.');
         }
         $payableCode = $accountCodes['payable'] ?? '211100';
         $expenseCode = $accountCodes['expense'] ?? '530000';

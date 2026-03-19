@@ -75,4 +75,19 @@ class ApBill extends Model
     {
         return in_array($this->status, ['issued', 'partially_paid', 'paid'], true);
     }
+
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
 }

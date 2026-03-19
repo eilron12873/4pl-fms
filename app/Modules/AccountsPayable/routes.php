@@ -19,6 +19,9 @@ Route::middleware(['auth', 'verified', 'permission:accounts-payable.view'])
         Route::get('/bills/{id}/edit', [AccountsPayableController::class, 'billEdit'])->name('bills.edit')->whereNumber('id')->middleware('permission:accounts-payable.manage');
         Route::put('/bills/{id}', [AccountsPayableController::class, 'billUpdate'])->name('bills.update')->whereNumber('id')->middleware('permission:accounts-payable.manage');
         Route::get('/bills/{id}', [AccountsPayableController::class, 'billShow'])->name('bills.show')->whereNumber('id');
+        Route::post('/bills/{id}/submit', [AccountsPayableController::class, 'billSubmit'])->name('bills.submit')->whereNumber('id')->middleware('permission:accounts-payable.manage');
+        Route::post('/bills/{id}/approve', [AccountsPayableController::class, 'billApprove'])->name('bills.approve')->whereNumber('id')->middleware('permission:accounts-payable.approve');
+        Route::post('/bills/{id}/reject', [AccountsPayableController::class, 'billReject'])->name('bills.reject')->whereNumber('id')->middleware('permission:accounts-payable.approve');
         Route::post('/bills/{id}/issue', [AccountsPayableController::class, 'issueBill'])->name('bills.issue')->whereNumber('id')->middleware('permission:accounts-payable.manage');
         Route::post('/bills/{id}/credit-note', [AccountsPayableController::class, 'creditNoteStore'])->name('bills.credit-note')->whereNumber('id')->middleware('permission:accounts-payable.manage');
 

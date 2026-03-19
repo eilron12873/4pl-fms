@@ -16,8 +16,10 @@
                         <tr>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Code') }}</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Name') }}</th>
+                            <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Category') }}</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Currency') }}</th>
                             <th class="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{{ __('Terms (days)') }}</th>
+                            <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Preferred payment') }}</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Status') }}</th>
                         </tr>
                     </thead>
@@ -26,8 +28,20 @@
                             <tr>
                                 <td class="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{{ $v->code }}</td>
                                 <td class="px-4 py-2 text-gray-900 dark:text-gray-100">{{ $v->name }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $v->category ?? '—' }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $v->currency }}</td>
                                 <td class="px-4 py-2 text-right text-gray-600 dark:text-gray-300">{{ $v->payment_terms_days }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">
+                                    @if($v->preferred_payment_method === 'ach')
+                                        {{ __('ACH / Bank transfer') }}
+                                    @elseif($v->preferred_payment_method === 'check')
+                                        {{ __('Check') }}
+                                    @elseif($v->preferred_payment_method === 'other')
+                                        {{ __('Other') }}
+                                    @else
+                                        {{ __('Not specified') }}
+                                    @endif
+                                </td>
                                 <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs {{ $v->is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $v->is_active ? __('Active') : __('Inactive') }}</span></td>
                             </tr>
                         @empty

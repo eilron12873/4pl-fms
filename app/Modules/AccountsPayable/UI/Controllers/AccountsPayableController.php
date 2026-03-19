@@ -11,6 +11,7 @@ use App\Modules\AccountsPayable\Infrastructure\Models\ApCheck;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApPayment;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApVoucher;
 use App\Modules\AccountsPayable\Infrastructure\Models\Vendor;
+use App\Core\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,12 +21,18 @@ class AccountsPayableController extends Controller
     public function __construct(
         protected BillService $billService,
         protected ApReportingService $reporting,
+        protected AuditService $audit,
     ) {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('accounts-payable::index');
+        $asOfDate = $request->filled('as_of_date') ? $request->string('as_of_date')->toString() : now()->toDateString();
+        $kpis = $this->reporting->kpis($asOfDate);
+
+        return view('accounts-payable::index', [
+            'kpis' => $kpis,
+        ]);
     }
 
     public function vendors(Request $request): View
@@ -50,10 +57,22 @@ class AccountsPayableController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'currency' => ['required', 'string', 'size:3'],
             'payment_terms_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'category' => ['nullable', 'string', 'max:50'],
+            'tax_id' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string'],
+            'bank_name' => ['nullable', 'string', 'max:150'],
+            'bank_account_number' => ['nullable', 'string', 'max:100'],
+            'bank_swift_code' => ['nullable', 'string', 'max:50'],
+            'preferred_payment_method' => ['nullable', 'string', 'in:ach,check,other'],
         ]);
         $data['payment_terms_days'] = $data['payment_terms_days'] ?? 30;
-        Vendor::create($data);
+        $vendor = Vendor::create($data);
+        $this->audit->log(
+            description: 'Vendor created in AP',
+            event: 'ap.vendor.created',
+            subject: $vendor,
+            properties: ['vendor_code' => $vendor->code],
+        );
         return redirect()->route('accounts-payable.vendors.index')->with('success', __('Vendor created.'));
     }
 
@@ -80,7 +99,11 @@ class AccountsPayableController extends Controller
             $po = \App\Modules\Procurement\Infrastructure\Models\PurchaseOrder::with(['vendor', 'lines'])->find($request->integer('purchase_order_id'));
             if ($po) {
                 $purchaseOrder = $po;
-                $presetLines = $po->lines->map(fn ($l) => ['description' => $l->description, 'amount' => (string) $l->amount])->values()->all();
+                $presetLines = $po->lines->map(fn ($l) => [
+                    'description' => $l->description,
+                    'amount' => (string) $l->amount,
+                    'purchase_order_line_id' => $l->id,
+                ])->values()->all();
             }
         }
         return view('accounts-payable::bills.create', compact('vendors', 'purchaseOrder', 'presetLines'));
@@ -98,6 +121,7 @@ class AccountsPayableController extends Controller
             'lines' => ['required', 'array'],
             'lines.*.description' => ['nullable', 'string', 'max:500'],
             'lines.*.amount' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.purchase_order_line_id' => ['nullable', 'integer', 'exists:purchase_order_lines,id'],
         ]);
         $data['lines'] = array_values(array_filter($data['lines'], function ($l) {
             return isset($l['description']) && trim((string) $l['description']) !== '' && isset($l['amount']) && (float) $l['amount'] > 0;
@@ -109,14 +133,20 @@ class AccountsPayableController extends Controller
             $data['purchase_order_id'] = (int) $data['purchase_order_id'];
         }
         $bill = $this->billService->createManualBill($data);
+        $this->audit->logFinancial(
+            description: 'AP draft bill created',
+            subject: $bill,
+            properties: ['bill_number' => $bill->bill_number],
+            event: 'ap.bill.draft_created',
+        );
         return redirect()->route('accounts-payable.bills.show', $bill->id)->with('success', __('Bill created. You can issue it when ready.'));
     }
 
     public function billEdit(int $id): View|RedirectResponse
     {
         $bill = ApBill::with('lines')->findOrFail($id);
-        if ($bill->isIssued()) {
-            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Cannot edit an issued bill.'));
+        if (! $bill->isDraft()) {
+            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only draft bills can be edited.'));
         }
         $vendors = Vendor::where('is_active', true)->orderBy('code')->get();
         $lines = $bill->lines->map(fn ($l) => ['description' => $l->description, 'amount' => $l->amount])->values()->all();
@@ -126,8 +156,8 @@ class AccountsPayableController extends Controller
     public function billUpdate(Request $request, int $id): RedirectResponse
     {
         $bill = ApBill::findOrFail($id);
-        if ($bill->isIssued()) {
-            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Cannot edit an issued bill.'));
+        if (! $bill->isDraft()) {
+            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only draft bills can be edited.'));
         }
         $data = $request->validate([
             'vendor_id' => ['required', 'exists:vendors,id'],
@@ -146,19 +176,58 @@ class AccountsPayableController extends Controller
             return redirect()->back()->withInput($request->input())->withErrors(['lines' => __('At least one line with description and amount is required.')]);
         }
         $this->billService->updateDraftBill($bill, $data);
+        $this->audit->logFinancial(
+            description: 'AP draft bill updated',
+            subject: $bill->fresh(),
+            properties: ['bill_number' => $bill->bill_number],
+            event: 'ap.bill.draft_updated',
+        );
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill updated.'));
     }
 
     public function billShow(int $id): View
     {
-        $bill = ApBill::with(['vendor', 'lines.journal', 'adjustments', 'purchaseOrder'])->findOrFail($id);
-        return view('accounts-payable::bills.show', compact('bill'));
+        $bill = ApBill::with([
+            'vendor',
+            'lines.journal',
+            'lines.purchaseOrderLine.purchaseOrder',
+            'adjustments',
+            'purchaseOrder.lines',
+        ])->findOrFail($id);
+
+        $poVariance = null;
+        if ($bill->purchaseOrder) {
+            $poTotal = (float) ($bill->purchaseOrder->total ?? 0);
+            // Sum billed amounts across all AP bills linked to this P.O.
+            $billedToPo = \App\Modules\AccountsPayable\Infrastructure\Models\ApBillLine::whereHas('bill', function ($q) use ($bill) {
+                $q->where('purchase_order_id', $bill->purchase_order_id);
+            })->sum('amount');
+            $currentBillAmount = (float) $bill->lines->sum('amount');
+            $remaining = $poTotal - (float) $billedToPo;
+            $poVariance = [
+                'po_total' => $poTotal,
+                'billed_total' => (float) $billedToPo,
+                'current_bill' => $currentBillAmount,
+                'remaining' => $remaining,
+            ];
+        }
+
+        return view('accounts-payable::bills.show', compact('bill', 'poVariance'));
     }
 
     public function issueBill(int $id): RedirectResponse
     {
         $bill = ApBill::findOrFail($id);
+        if (! $bill->isApproved()) {
+            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only approved bills can be issued.'));
+        }
         $this->billService->issueBill($bill);
+        $this->audit->logFinancial(
+            description: 'AP bill issued',
+            subject: $bill->fresh(),
+            properties: ['bill_number' => $bill->bill_number],
+            event: 'ap.bill.issued',
+        );
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill issued.'));
     }
 
@@ -226,7 +295,13 @@ class AccountsPayableController extends Controller
         if ($data['payment_method'] === 'check' && empty($data['bank_account_id'])) {
             $data['bank_account_id'] = null;
         }
-        $this->billService->recordPayment($data);
+        $payment = $this->billService->recordPayment($data);
+        $this->audit->logFinancial(
+            description: 'AP payment recorded',
+            subject: $payment,
+            properties: ['payment_id' => $payment->id, 'vendor_id' => $payment->vendor_id],
+            event: 'ap.payment.recorded',
+        );
         return redirect()->route('accounts-payable.payments.index')->with('success', __('Payment recorded.'));
     }
 
@@ -238,8 +313,62 @@ class AccountsPayableController extends Controller
             'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $balanceDue],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
-        $this->billService->createCreditNote($bill, (float) $data['amount'], $data['reason'] ?? '');
+        $adjustment = $this->billService->createCreditNote($bill, (float) $data['amount'], $data['reason'] ?? '');
+        $this->audit->logFinancial(
+            description: 'AP vendor credit note created',
+            subject: $adjustment,
+            properties: ['bill_id' => $bill->id, 'adjustment_id' => $adjustment->id],
+            event: 'ap.bill.credit_note',
+        );
         return redirect()->route('accounts-payable.bills.show', $billId)->with('success', __('Credit note created.'));
+    }
+
+    public function billSubmit(int $id): RedirectResponse
+    {
+        $bill = ApBill::findOrFail($id);
+        if (! $bill->isDraft()) {
+            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only draft bills can be submitted for approval.'));
+        }
+        $bill->update(['status' => 'pending_approval']);
+        $this->audit->logFinancial(
+            description: 'AP bill submitted for approval',
+            subject: $bill,
+            properties: ['bill_number' => $bill->bill_number],
+            event: 'ap.bill.submitted',
+        );
+        return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill submitted for approval.'));
+    }
+
+    public function billApprove(int $id): RedirectResponse
+    {
+        $bill = ApBill::findOrFail($id);
+        if (! $bill->isPendingApproval()) {
+            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only pending bills can be approved.'));
+        }
+        $bill->update(['status' => 'approved']);
+        $this->audit->logFinancial(
+            description: 'AP bill approved',
+            subject: $bill,
+            properties: ['bill_number' => $bill->bill_number],
+            event: 'ap.bill.approved',
+        );
+        return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill approved. You can now issue it.'));
+    }
+
+    public function billReject(int $id): RedirectResponse
+    {
+        $bill = ApBill::findOrFail($id);
+        if (! $bill->isPendingApproval()) {
+            return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only pending bills can be rejected.'));
+        }
+        $bill->update(['status' => 'draft']);
+        $this->audit->logFinancial(
+            description: 'AP bill rejected back to draft',
+            subject: $bill,
+            properties: ['bill_number' => $bill->bill_number],
+            event: 'ap.bill.rejected',
+        );
+        return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill rejected back to draft.'));
     }
 
     public function vouchers(Request $request): View
@@ -292,6 +421,12 @@ class AccountsPayableController extends Controller
             return redirect()->route('accounts-payable.checks.show', $id)->with('error', __('Check is already void.'));
         }
         $check->update(['status' => ApCheck::STATUS_VOID]);
+        $this->audit->logFinancial(
+            description: 'AP check voided',
+            subject: $check->fresh(),
+            properties: ['check_id' => $check->id, 'check_number' => $check->check_number],
+            event: 'ap.check.voided',
+        );
         return redirect()->route('accounts-payable.checks.show', $id)->with('success', __('Check voided.'));
     }
 }

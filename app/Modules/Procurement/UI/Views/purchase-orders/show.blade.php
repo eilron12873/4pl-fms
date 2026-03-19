@@ -8,7 +8,7 @@
     <div class="py-4 max-w-4xl mx-auto sm:px-6 lg:px-8">
         @if(session('success'))<div class="mb-4 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm">{{ session('success') }}</div>@endif
         @if(session('error'))<div class="mb-4 p-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{{ session('error') }}</div>@endif
-        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+        <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 space-y-4">
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-4">
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('P.O. number') }}</dt><dd class="font-mono font-medium">{{ $order->po_number }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Vendor') }}</dt><dd>{{ $order->vendor?->name ?? '—' }}</dd></div>
@@ -18,6 +18,16 @@
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Total') }}</dt><dd class="font-medium">{{ number_format($order->total ?? 0, 2) }} {{ $order->currency }}</dd></div>
                 @if($order->received_date)<div><dt class="text-gray-500 dark:text-gray-400">{{ __('Received date') }}</dt><dd>{{ $order->received_date?->format('Y-m-d') }}</dd></div>@endif
             </dl>
+            @isset($poVariance)
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{{ __('AP variance summary') }}</h3>
+                    <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div><dt class="text-gray-500 dark:text-gray-400">{{ __('P.O. total') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['po_total'], 2) }} {{ $order->currency }}</dd></div>
+                        <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Billed so far') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['billed_total'], 2) }} {{ $order->currency }}</dd></div>
+                        <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Remaining') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['remaining'], 2) }} {{ $order->currency }}</dd></div>
+                    </dl>
+                </div>
+            @endisset
             @if(auth()->user()?->can('procurement.manage'))
                 <div class="flex flex-wrap gap-2 mt-2 mb-4">
                     @if($order->status === 'draft')

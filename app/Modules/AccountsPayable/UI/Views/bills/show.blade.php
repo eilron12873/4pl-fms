@@ -17,16 +17,43 @@
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Total') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($bill->total, 2) }} {{ $bill->currency }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Balance due') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($bill->balance_due, 2) }} {{ $bill->currency }}</dd></div>
             </dl>
-            @if(!$bill->isIssued() && auth()->user()?->can('accounts-payable.manage'))
-                <div class="mt-4 flex gap-2">
+            <div class="mt-4 flex flex-wrap gap-2">
+                @if($bill->isDraft() && auth()->user()?->can('accounts-payable.manage'))
                     <a href="{{ route('accounts-payable.bills.edit', $bill->id) }}" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Edit bill') }}</a>
+                    <form method="POST" action="{{ route('accounts-payable.bills.submit', $bill->id) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-amber-600 text-white text-sm hover:bg-amber-700">{{ __('Submit for approval') }}</button>
+                    </form>
+                @endif
+                @if($bill->isPendingApproval() && auth()->user()?->can('accounts-payable.approve'))
+                    <form method="POST" action="{{ route('accounts-payable.bills.approve', $bill->id) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-green-600 text-white text-sm hover:bg-green-700">{{ __('Approve') }}</button>
+                    </form>
+                    <form method="POST" action="{{ route('accounts-payable.bills.reject', $bill->id) }}">
+                        @csrf
+                        <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-red-600 text-white text-sm hover:bg-red-700">{{ __('Reject') }}</button>
+                    </form>
+                @endif
+                @if($bill->isApproved() && auth()->user()?->can('accounts-payable.manage'))
                     <form method="POST" action="{{ route('accounts-payable.bills.issue', $bill->id) }}">
                         @csrf
                         <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue bill') }}</button>
                     </form>
-                </div>
-            @endif
+                @endif
+            </div>
         </div>
+        @if($poVariance)
+            <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ __('P.O. variance summary') }}</h3>
+                <dl class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                    <div><dt class="text-gray-500 dark:text-gray-400">{{ __('P.O. total') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['po_total'], 2) }} {{ $bill->currency }}</dd></div>
+                    <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Billed (all bills)') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['billed_total'], 2) }} {{ $bill->currency }}</dd></div>
+                    <div><dt class="text-gray-500 dark:text-gray-400">{{ __('This bill') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['current_bill'], 2) }} {{ $bill->currency }}</dd></div>
+                    <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Remaining against P.O.') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($poVariance['remaining'], 2) }} {{ $bill->currency }}</dd></div>
+                </dl>
+            </div>
+        @endif
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
             <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Lines') }}</h3>
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
