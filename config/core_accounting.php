@@ -22,5 +22,13 @@ return [
         // Defaults used by core-accounting:prune-posting-payloads when --days is not provided.
         'posting_source_payload_days' => 365, // 1 year
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rules-Only Posting Rollout
+    |--------------------------------------------------------------------------
+    */
+    'rules_only_mode' => env('CORE_ACCOUNTING_RULES_ONLY_MODE', false),
+    'fallback_telemetry_enabled' => env('CORE_ACCOUNTING_FALLBACK_TELEMETRY', true),
 ];
 

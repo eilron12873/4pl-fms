@@ -67,14 +67,14 @@ The pack stays within the existing major groups:
 
 ### 3.1 Tax Assets (Current Assets)
 
-Suggested accounts under `13xx`:
+Suggested 6-digit accounts under `14xxxx` (Prepaid/Tax Assets):
 
-- `1310` — Prepaid Income Tax  
-- `1320` — Input VAT — Goods  
-- `1321` — Input VAT — Services  
-- `1322` — Input VAT — Importation (optional if needed)  
-- `1330` — Excess Input VAT Carry Over  
-- `1340` — Other Tax Credits / Prepayments
+- `143100` — Prepaid Income Tax  
+- `143200` — Input VAT — Goods  
+- `143210` — Input VAT — Services  
+- `143220` — Input VAT — Importation (optional if needed)  
+- `143300` — Excess Input VAT Carry Over  
+- `143900` — Other Tax Credits / Prepayments
 
 Usage:
 
@@ -84,31 +84,31 @@ Usage:
 
 ### 3.2 Tax Liabilities (Current Liabilities)
 
-Extend the `207x` / `208x` range for taxes payable.
+Extend the `213xxx` range for taxes payable (under `213000` Taxes Payable).
 
 Examples:
 
-- `2070` — Taxes Payable (generic, existing)  
-- `2071` — VAT Output Payable – Standard Rate  
-- `2072` — VAT Payable – Other / Special Rates (if applicable)  
-- `2073` — VAT Control / Suspense  
-- `2074` — Withholding Tax – Compensation  
-- `2075` — Withholding Tax – Expanded  
-- `2076` — Withholding Tax – Final  
-- `2077` — Income Tax Payable – Current  
-- `2078` — MCIT Payable (if applicable)  
-- `2079` — Other Tax Payables
+- `213000` — Taxes Payable (group, non-posting)  
+- `213100` — VAT Payable  
+- `213110` — VAT Payable – Standard Rate  
+- `213120` — VAT Control / Suspense  
+- `213200` — Withholding Tax Payable  
+- `213300` — Expanded Withholding Tax  
+- `213400` — Final Withholding Tax  
+- `213500` — Income Tax Payable  
+- `213510` — MCIT Payable  
+- `213900` — Other Tax Payables
 
 These are **current liabilities**; position and maturity are driven by local law.
 
-### 3.3 Deferred Tax (Non‑current)
+### 3.3 Deferred Tax (Non-current)
 
-You can use a small `23xx` or `24xx` range for deferred tax.
+Use non-current liability and asset detail within the 6-digit structure.
 
 Examples:
 
-- `2310` — Deferred Tax Asset  
-- `2320` — Deferred Tax Liability
+- `154900` — Deferred Tax Asset  
+- `226000` — Deferred Tax Liability
 
 Classification:
 
@@ -117,12 +117,12 @@ Classification:
 
 ### 3.4 Statutory Payroll Contributions (Liabilities)
 
-Extend `206x` or `208x` for statutory payroll contributions:
+Use detail under `214000` Payroll Liabilities:
 
-- `2061` — SSS Contributions Payable  
-- `2062` — HDMF Contributions Payable  
-- `2063` — PhilHealth Contributions Payable  
-- `2064` — Other Statutory Payroll Payable
+- `214100` — SSS Payable  
+- `214200` — PhilHealth Payable  
+- `214300` — Pag-IBIG/HDMF Payable  
+- `214400` — Payroll Taxes Payable
 
 These typically arise from:
 
@@ -134,15 +134,15 @@ These typically arise from:
 Within `6000` range, you can either:
 
 - Keep a **single group** for tax expenses and statutory contributions, or
-- Use a **sub‑range** like `6700` for tax and regulatory expenses.
+- Use a **sub-range** like `67xxxx` for tax and regulatory expenses.
 
 Examples:
 
-- `6700` — Tax & License Expenses  
-- `6710` — Income Tax Expense – Current  
-- `6720` — Income Tax Expense – Deferred  
-- `6730` — Other Tax & Regulatory Expenses  
-- `6740` — Statutory Contributions – Employer (SSS/HDMF/PhilHealth, if you want to group them here rather than payroll)
+- `670000` — Tax & License Expenses  
+- `671000` — Income Tax Expense – Current  
+- `672000` — Income Tax Expense – Deferred  
+- `673000` — Other Tax & Regulatory Expenses  
+- `674000` — Statutory Contributions – Employer
 
 Penalties and fines can either:
 
@@ -320,19 +320,19 @@ Illustrative mappings (based on the example QB COA):
 
 - `109002` Input VAT – Local Purchases → `1320` Input VAT – Goods (`tax_category = vat_input`, `tax_region = HQ`)  
 - `109003` Input VAT – Services → `1321` Input VAT – Services (`tax_category = vat_input`)  
-- `109010` Excess Input VAT Carry Over → `1330` Excess Input VAT Carry Over  
-- `203002` Output VAT → `2071` VAT Output Payable – Standard Rate (`tax_category = vat_output`)  
-- `203006` Output VAT (VISMIN) → `2071` VAT Output Payable – Standard Rate (`tax_region = VISMIN`)  
-- `203003` Withholding Tax – Compensation → `2074` Withholding Tax – Compensation  
-- `203004` Withholding Tax – Expanded → `2075` Withholding Tax – Expanded  
-- `203005` Withholding Tax – Final → `2076` Withholding Tax – Final  
-- `203001` Income Tax Payable → `2077` Income Tax Payable – Current  
-- `207002` MCIT Payable → `2078` MCIT Payable  
-- `202004` SSS Premium Payable → `2061` SSS Contributions Payable  
-- `202001` HDMF Premium Payable → `2062` HDMF Contributions Payable  
-- `202006` PhilHealth Premium Payable → `2063` PhilHealth Contributions Payable  
-- `614001` Provision for Income Tax – Current → `6710` Income Tax Expense – Current  
-- `614002` Provision for Income Tax – Deferred → `6720` Income Tax Expense – Deferred  
+- `109010` Excess Input VAT Carry Over → `143300` Excess Input VAT Carry Over  
+- `203002` Output VAT → `213110` VAT Payable – Standard Rate (`tax_category = vat_output`)  
+- `203006` Output VAT (VISMIN) → `213110` VAT Payable – Standard Rate (`tax_region = VISMIN`)  
+- `203003` Withholding Tax – Compensation → `213200` Withholding Tax Payable  
+- `203004` Withholding Tax – Expanded → `213300` Expanded Withholding Tax  
+- `203005` Withholding Tax – Final → `213400` Final Withholding Tax  
+- `203001` Income Tax Payable → `213500` Income Tax Payable  
+- `207002` MCIT Payable → `213510` MCIT Payable  
+- `202004` SSS Premium Payable → `214100` SSS Payable  
+- `202001` HDMF Premium Payable → `214300` Pag-IBIG/HDMF Payable  
+- `202006` PhilHealth Premium Payable → `214200` PhilHealth Payable  
+- `614001` Provision for Income Tax – Current → `671000` Income Tax Expense – Current  
+- `614002` Provision for Income Tax – Deferred → `672000` Income Tax Expense – Deferred  
 - `615006` Penalties, Surcharge, Others → `8020` Penalties and Fines
 
 These examples show how multiple QB accounts often map to a **smaller, well-structured set** of LFS tax/statutory accounts, with **dimensions** capturing region or other segmentation instead of multiplying GL codes.

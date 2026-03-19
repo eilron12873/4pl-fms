@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->call(InventorySeeder::class);
         $this->call(FixedAssetsSeeder::class);
         $this->call(CostingEngineDemoSeeder::class);
+        $this->call(AccountsReceivableDemoSeeder::class);
 
         $user = User::firstOrCreate(
             ['email' => 'test@example.com'],

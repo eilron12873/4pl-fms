@@ -5,13 +5,17 @@ namespace App\Modules\CoreAccounting\UI\Controllers;
 use App\Core\Services\AuditService;
 use App\Http\Controllers\Controller;
 use App\Modules\CoreAccounting\Application\CoreAccountingOverview;
+use App\Modules\CoreAccounting\Application\PeriodCloseGateService;
 use App\Modules\CoreAccounting\Infrastructure\Models\Account;
 use App\Modules\CoreAccounting\Infrastructure\Models\AccountImportLog;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingRule;
+use App\Modules\CoreAccounting\Infrastructure\Models\PostingRuleAuditLog;
+use App\Modules\CoreAccounting\Infrastructure\Models\PostingRuleVersion;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingSource;
 use App\Modules\CoreAccounting\Infrastructure\Models\Period;
 use App\Modules\CoreAccounting\Infrastructure\Models\PeriodChangeLog;
+use App\Modules\CoreAccounting\Infrastructure\Models\PeriodCloseEvidence;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,6 +25,7 @@ class CoreAccountingController extends Controller
     public function __construct(
         protected AuditService $audit,
         protected CoreAccountingOverview $overview,
+        protected PeriodCloseGateService $periodCloseGate,
     ) {}
     public function index(): View
     {
@@ -464,6 +469,16 @@ class CoreAccountingController extends Controller
         if ($period->isClosed()) {
             return redirect()->route('core-accounting.periods.index')->with('error', __('Period is already closed.'));
         }
+        [$passed, $checks] = $this->periodCloseGate->runChecks($period);
+        PeriodCloseEvidence::create([
+            'period_id' => $period->id,
+            'created_by' => $request->user()?->id,
+            'checks' => $checks,
+            'metadata' => ['action' => 'close'],
+        ]);
+        if (! $passed) {
+            return redirect()->route('core-accounting.periods.index')->with('error', __('Pre-close checks failed. Resolve outstanding issues before closing this period.'));
+        }
         $period->update([
             'status' => 'closed',
             'closed_at' => now(),
@@ -480,6 +495,46 @@ class CoreAccountingController extends Controller
             'period.closed',
         );
         return redirect()->route('core-accounting.periods.index')->with('success', __('Period closed.'));
+    }
+
+    public function reopenPeriod(Request $request, int $id): RedirectResponse
+    {
+        $this->authorize('core-accounting.manage');
+        $period = Period::findOrFail($id);
+        if ($period->isOpen()) {
+            return redirect()->route('core-accounting.periods.index')->with('error', __('Period is already open.'));
+        }
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $period->update([
+            'status' => 'open',
+            'closed_at' => null,
+        ]);
+
+        PeriodChangeLog::create([
+            'period_id' => $period->id,
+            'action' => 'reopened',
+            'user_id' => $request->user()?->id,
+        ]);
+
+        PeriodCloseEvidence::create([
+            'period_id' => $period->id,
+            'created_by' => $request->user()?->id,
+            'checks' => [['code' => 'reopen_reason', 'passed' => true, 'message' => $data['reason']]],
+            'metadata' => ['action' => 'reopen', 'reason' => $data['reason']],
+        ]);
+
+        $this->audit->logFinancial(
+            "Period reopened: {$period->code}",
+            $period,
+            ['period_code' => $period->code, 'reason' => $data['reason']],
+            'period.reopened',
+        );
+
+        return redirect()->route('core-accounting.periods.index')->with('success', __('Period reopened.'));
     }
 
     public function postingRules(): View
@@ -512,6 +567,15 @@ class CoreAccountingController extends Controller
 
         $this->syncPostingRuleLines($rule, $data['lines'] ?? []);
         $this->syncPostingRuleConditions($rule, $data['conditions'] ?? []);
+        $version = $this->createPostingRuleVersion($rule, $request);
+        $this->logPostingRuleAudit(
+            $rule,
+            'created',
+            null,
+            $this->postingRuleSnapshot($rule->fresh(['lines', 'conditions'])),
+            $request,
+            $version?->id
+        );
 
         return redirect()
             ->route('core-accounting.posting-rules.index')
@@ -533,6 +597,7 @@ class CoreAccountingController extends Controller
     public function postingRulesUpdate(Request $request, int $id): RedirectResponse
     {
         $rule = PostingRule::findOrFail($id);
+        $before = $this->postingRuleSnapshot($rule->load(['lines', 'conditions']));
         $data = $this->validatePostingRule($request, $rule->id);
 
         $rule->update([
@@ -543,6 +608,15 @@ class CoreAccountingController extends Controller
 
         $this->syncPostingRuleLines($rule, $data['lines'] ?? []);
         $this->syncPostingRuleConditions($rule, $data['conditions'] ?? []);
+        $version = $this->createPostingRuleVersion($rule, $request);
+        $this->logPostingRuleAudit(
+            $rule,
+            'updated',
+            $before,
+            $this->postingRuleSnapshot($rule->fresh(['lines', 'conditions'])),
+            $request,
+            $version?->id
+        );
 
         return redirect()
             ->route('core-accounting.posting-rules.index')
@@ -657,6 +731,72 @@ class CoreAccountingController extends Controller
                 'priority' => 100,
             ]);
         }
+    }
+
+    protected function createPostingRuleVersion(PostingRule $rule, Request $request): PostingRuleVersion
+    {
+        $nextVersion = ((int) $rule->versions()->max('version_number')) + 1;
+        $status = $rule->is_active ? 'active' : 'draft';
+        $effectiveFrom = $rule->is_active ? now()->toDateString() : null;
+
+        return PostingRuleVersion::create([
+            'posting_rule_id' => $rule->id,
+            'version_number' => $nextVersion,
+            'status' => $status,
+            'effective_from' => $effectiveFrom,
+            'created_by' => $request->user()?->id,
+            'approved_by' => $rule->is_active ? $request->user()?->id : null,
+            'approved_at' => $rule->is_active ? now() : null,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function postingRuleSnapshot(PostingRule $rule): array
+    {
+        return [
+            'id' => $rule->id,
+            'event_type' => $rule->event_type,
+            'description' => $rule->description,
+            'is_active' => (bool) $rule->is_active,
+            'lines' => $rule->lines->map(fn ($line) => [
+                'account_id' => $line->account_id,
+                'entry_type' => $line->entry_type,
+                'amount_source' => $line->amount_source,
+                'resolver_type' => $line->resolver_type,
+                'dimension_source' => $line->dimension_source,
+                'sequence' => $line->sequence,
+            ])->values()->all(),
+            'conditions' => $rule->conditions->map(fn ($condition) => [
+                'field_name' => $condition->field_name,
+                'operator' => $condition->operator,
+                'comparison_value' => $condition->comparison_value,
+                'priority' => $condition->priority,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
+    protected function logPostingRuleAudit(
+        PostingRule $rule,
+        string $action,
+        ?array $before,
+        ?array $after,
+        Request $request,
+        ?int $versionId = null
+    ): void {
+        PostingRuleAuditLog::create([
+            'posting_rule_id' => $rule->id,
+            'posting_rule_version_id' => $versionId,
+            'action' => $action,
+            'actor_user_id' => $request->user()?->id,
+            'before_state' => $before,
+            'after_state' => $after,
+        ]);
     }
 }
 

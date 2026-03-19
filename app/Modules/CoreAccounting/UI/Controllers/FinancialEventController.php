@@ -6,10 +6,14 @@ use App\Events\JournalPosted;
 use App\Http\Controllers\Controller;
 use App\Models\IntegrationLog;
 use App\Modules\CoreAccounting\Application\FinancialEventDispatcher;
+use App\Modules\CoreAccounting\Domain\Exceptions\JournalNotBalancedException;
+use App\Modules\CoreAccounting\Domain\Exceptions\PeriodLockedException;
+use App\Modules\CoreAccounting\Domain\Exceptions\PostingRuleNotFoundException;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingSource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class FinancialEventController extends Controller
 {
@@ -20,6 +24,15 @@ class FinancialEventController extends Controller
 
     public function __invoke(string $event_type, Request $request): JsonResponse
     {
+        if (str_contains($event_type, '_')) {
+            return response()->json([
+                'status' => 'error',
+                'error_code' => 'INVALID_EVENT_TYPE',
+                'message' => 'Event type must use kebab-case.',
+                'event_type' => $event_type,
+            ], 422);
+        }
+
         $data = $request->validate([
             'idempotency_key' => ['required', 'string', 'max:255'],
             'source_system' => ['required', 'string', 'max:255'],
@@ -54,6 +67,7 @@ class FinancialEventController extends Controller
                 'source_reference' => $data['source_reference'],
             ]);
         } catch (\Throwable $e) {
+            [$httpCode, $errorCode] = $this->resolveErrorContract($e);
             IntegrationLog::create([
                 'event_type' => $event_type,
                 'idempotency_key' => $data['idempotency_key'],
@@ -63,7 +77,13 @@ class FinancialEventController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            throw $e;
+            return response()->json([
+                'status' => 'error',
+                'error_code' => $errorCode,
+                'message' => $e->getMessage(),
+                'event_type' => $event_type,
+                'idempotency_key' => $data['idempotency_key'],
+            ], $httpCode);
         }
 
         $status = $result['status'];
@@ -106,6 +126,20 @@ class FinancialEventController extends Controller
         }
         // TODO: Verify $signature against payload (e.g. HMAC of json_encode($data['payload']))
         // when signing key/algorithm is defined. For now we accept any value.
+    }
+
+    /**
+     * @return array{0:int,1:string}
+     */
+    protected function resolveErrorContract(\Throwable $e): array
+    {
+        return match (true) {
+            $e instanceof PostingRuleNotFoundException => [422, 'RULE_NOT_FOUND'],
+            $e instanceof PeriodLockedException => [409, 'PERIOD_LOCKED'],
+            $e instanceof JournalNotBalancedException => [422, 'JOURNAL_NOT_BALANCED'],
+            $e instanceof InvalidArgumentException => [422, 'RULE_VALIDATION_FAILED'],
+            default => [500, 'INTERNAL_ERROR'],
+        };
     }
 }
 

@@ -4,7 +4,9 @@ namespace App\Modules\CoreAccounting\Application\GLPostingEngine;
 
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingRule;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingRuleLine;
+use App\Modules\CoreAccounting\Domain\Exceptions\PostingRuleNotFoundException;
 use InvalidArgumentException;
+use Illuminate\Support\Facades\Log;
 
 class GLPostingEngine
 {
@@ -29,6 +31,15 @@ class GLPostingEngine
         $rule = $this->resolver->findActiveRuleForEvent($eventType, $payload);
 
         if (! $rule) {
+            if ((bool) config('core_accounting.rules_only_mode', false)) {
+                throw new PostingRuleNotFoundException("No active posting rule found for event type {$eventType}.");
+            }
+            if ((bool) config('core_accounting.fallback_telemetry_enabled', true)) {
+                Log::warning('CoreAccounting fallback posting path engaged.', [
+                    'event_type' => $eventType,
+                    'idempotency_key' => $payload['idempotency_key'] ?? null,
+                ]);
+            }
             return null;
         }
 

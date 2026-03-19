@@ -24,6 +24,7 @@ Route::middleware(['auth', 'verified', 'permission:core-accounting.view'])
         Route::get('/posting-sources', [CoreAccountingController::class, 'postingSources'])->name('posting-sources.index');
         Route::get('/periods', [CoreAccountingController::class, 'periods'])->name('periods.index');
         Route::post('/periods/{id}/close', [CoreAccountingController::class, 'closePeriod'])->name('periods.close')->whereNumber('id')->middleware('permission:core-accounting.manage');
+        Route::post('/periods/{id}/reopen', [CoreAccountingController::class, 'reopenPeriod'])->name('periods.reopen')->whereNumber('id')->middleware('permission:core-accounting.manage');
         Route::get('/posting-rules', [CoreAccountingController::class, 'postingRules'])->name('posting-rules.index');
         Route::get('/posting-rules/create', [CoreAccountingController::class, 'postingRulesCreate'])->name('posting-rules.create')->middleware('permission:core-accounting.manage');
         Route::post('/posting-rules', [CoreAccountingController::class, 'postingRulesStore'])->name('posting-rules.store')->middleware('permission:core-accounting.manage');

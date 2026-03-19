@@ -27,5 +27,15 @@ class PostingRule extends Model
     {
         return $this->hasMany(PostingRuleCondition::class);
     }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(PostingRuleVersion::class)->orderByDesc('version_number');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(PostingRuleAuditLog::class)->orderByDesc('id');
+    }
 }
 

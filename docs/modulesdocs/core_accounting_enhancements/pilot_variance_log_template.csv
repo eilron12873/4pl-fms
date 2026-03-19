@@ -1,0 +1,3 @@
+variance_id,period,event_type_or_report,source_total,lfs_total,variance_amount,variance_pct,severity,owner,status,root_cause,action,eta,signoff_reference
+VAR-001,2026-03,trial_balance,,,,,Medium,,,,
+

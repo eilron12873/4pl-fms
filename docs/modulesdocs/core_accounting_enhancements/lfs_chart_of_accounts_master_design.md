@@ -47,36 +47,37 @@ The LFS COA follows the principles:
 
 # 3. Account Number Structure
 
-Recommended structure:
+Current standard structure:
 
-XXXX -- Major category\
-XX -- Sub category\
-XX -- Detail account
+XYYZZZ
 
-Example:
+Where:
 
-4000 -- Revenue\
-4100 -- Warehousing Revenue\
-4110 -- Pallet Storage Revenue
+X -- Financial statement class\
+YY -- Category\
+ZZZ -- Detailed account / subgroup
 
-Example code:
+Example hierarchy:
 
-411001 -- Pallet Storage Revenue
+100000 -- Assets (Level 1, no parent)\
+110000 -- Current Assets (parent: 100000, Level 2)\
+111000 -- Cash and Cash Equivalents (parent: 110000, Level 3)\
+111100 -- Cash on Hand (parent: 111000, Level 4)
 
 ------------------------------------------------------------------------
 
 # 4. Major Account Groups
 
-  Code   Category
-  ------ --------------------
-  1000   Assets
-  2000   Liabilities
-  3000   Equity
-  4000   Revenue
-  5000   Cost of Services
-  6000   Operating Expenses
-  7000   Other Income
-  8000   Other Expenses
+  Code    Category
+  ------- --------------------
+  100000  Assets
+  200000  Liabilities
+  300000  Equity
+  400000  Revenue
+  500000  Cost of Services
+  600000  Operating Expenses
+  700000  Other Income
+  800000  Other Expenses
 
 ------------------------------------------------------------------------
 
@@ -249,11 +250,11 @@ Shipment Delivered -- Revenue
 
 Debit:
 
-Accounts Receivable (1100)
+Trade Receivables (121100)
 
 Credit:
 
-Transport Revenue (4210)
+Freight Revenue (423000)
 
 Dimensions:
 

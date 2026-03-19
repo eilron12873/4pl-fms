@@ -51,7 +51,11 @@
                                                     <button type="submit" class="text-amber-600 dark:text-amber-400 hover:underline text-sm">{{ __('Close') }}</button>
                                                 </form>
                                             @else
-                                                —
+                                                <form method="POST" action="{{ route('core-accounting.periods.reopen', $period->id) }}" class="inline" onsubmit="const reason=prompt('{{ __('Reopen reason is required for audit logging:') }}'); if(!reason){return false;} this.querySelector('input[name=reason]').value=reason; return true;">
+                                                    @csrf
+                                                    <input type="hidden" name="reason" value="">
+                                                    <button type="submit" class="text-blue-600 dark:text-blue-400 hover:underline text-sm">{{ __('Reopen') }}</button>
+                                                </form>
                                             @endif
                                         </td>
                                     @endcan

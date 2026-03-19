@@ -215,6 +215,13 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
     - Code, name, type (asset/liability/equity/revenue/expense), level, and whether the account is **posting** or **summary**.
   - Pagination supports large charts.
   - If no accounts are present, the UI hints to run `ChartOfAccountsSeeder`.
+  - Bulk maintenance controls:
+    - Download CSV template
+    - Import CSV upload
+    - Export COA CSV
+  - Access behavior:
+    - Intended by permission: `core-accounting.manage`
+    - Current UI implementation also allows `Super Admin` role as a management fallback.
   - Each row has a **View** link:
     - Opens `GET /core-accounting/accounts/{id}` for account detail.
 
@@ -375,8 +382,8 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
 - **Posting Rules Management**
   - Default rules are seeded via `PostingRulesSeeder` to mirror the legacy hardcoded postings for common events (`shipment-delivered`, `storage-accrual`, `vendor-invoice-approved`, `project-milestone-completed`).
   - Seeder also demonstrates enterprise patterns:
-    - Dynamic revenue-by-service-line mapping for `shipment-delivered` using `AccountResolver` entries (e.g. warehousing → storage revenue, transport → freight revenue, project cargo → project revenue).
-    - A conditional rule for `vendor-invoice-approved` when `shipment_type = subcontracted`, posting to cost-of-freight accounts instead of standard transport expense.
+    - Dynamic revenue-by-service-line mapping for `shipment-delivered` using `AccountResolver` entries (e.g. warehousing → `411000`, transport → `423000`, project/service-line events → configured `43xxxx` service revenue account).
+    - A conditional rule for `vendor-invoice-approved` when `shipment_type = subcontracted`, posting to freight/cost accounts instead of default transport-cost mapping.
   - Finance users with `core-accounting.manage` permission can adjust these rules (accounts, amount source field, active flag, mapped dimensions, resolver hints, and basic conditions) through the Posting Rules UI without a code change.
 
 ---
@@ -411,13 +418,38 @@ Each feature screen has a **“Back to Core Accounting”** link in the header t
 ### 6.1 Alignment with Domain Blueprint & COA Design
 
 - The implemented Chart of Accounts follows the **LFS Chart of Accounts Master Design**:
-  - Uses the 1xxx–8xxx major group structure (Assets, Liabilities, Equity, Revenue, Cost of Services, Operating Expenses, Other Income, Other Expenses).
-  - Seeds logistics-native revenue and cost accounts (e.g. warehousing, transport, project logistics, value-added services, fuel, tolls, subcontracted freight) via `ChartOfAccountsSeeder`.
+  - Uses the 6-digit **`XYYZZZ`** structure:
+    - `X` = financial statement class (`1` assets, `2` liabilities, `3` equity, `4` revenue, `5` cost of services, `6` operating expenses, `7` other income, `8` other expenses)
+    - `YY` = category
+    - `ZZZ` = detailed account/subgroup
+  - Uses major 6-digit roots (`100000` to `800000`) and BIR-ready baseline groups seeded by `ChartOfAccountsSeeder`.
+  - Extends BIR baseline with logistics-native detail accounts while preserving hierarchy integrity (group nodes non-posting, leaf nodes posting).
   - Ensures compatibility with profitability dimensions (client, shipment, route, warehouse, vehicle, project, service line, cost center) at the journal line level.
 - The Core Accounting architecture is derived from the **Core Accounting Domain Blueprint (Laravel)**:
   - Domain exceptions and responsibilities match the blueprint (period governance, double-entry validation, posting source traceability, configurable posting rules).
   - Application services (`JournalService`, `FinancialEventDispatcher`, `GLPostingEngine`, rule and account resolvers) implement the recommended event → rule → journal pipeline.
   - Infrastructure repositories (`AccountRepository`, `PostingRuleRepository`, `JournalRepository`) provide the persistence access layer described in the blueprint while remaining internal implementation details.
+
+### 6.2 COA Hierarchy Rules (Current Implementation)
+
+The current seeder derives parent accounts from trailing-zero logic:
+
+- `X00000` -> level 1 root (no parent), e.g. `100000`
+- `XY0000` -> level 2, parent `X00000`
+- `XYY000` -> level 3, parent `XY0000`
+- `XYYZ00` -> level 4, parent `XYY000`
+- `XYYZZ0` -> level 5, parent `XYYZ00`
+- `XYYZZZ` -> parent `XYYZZ0` when present
+
+Operational conventions:
+
+- Group accounts should be `is_posting = false` when detailed children exist.
+- Posting should occur on detail/leaf accounts (`is_posting = true`).
+- Example:
+  - `152700` Vehicles = non-posting group
+  - `152710` Trucks (Logistics) = posting child
+  - `152900` Warehouse Equipment = non-posting group
+  - `152910` Warehouse Equipment (Logistics) = posting child
 
 ---
 
