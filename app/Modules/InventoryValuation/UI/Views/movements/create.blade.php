@@ -31,6 +31,7 @@
                                 <option value="issue" {{ old('movement_type') === 'issue' ? 'selected' : '' }}>{{ __('Issue') }}</option>
                                 <option value="transfer_in" {{ old('movement_type') === 'transfer_in' ? 'selected' : '' }}>{{ __('Transfer in') }}</option>
                                 <option value="transfer_out" {{ old('movement_type') === 'transfer_out' ? 'selected' : '' }}>{{ __('Transfer out') }}</option>
+                            <option value="transfer" {{ old('movement_type') === 'transfer' ? 'selected' : '' }}>{{ __('Transfer (both warehouses)') }}</option>
                                 <option value="adjustment" {{ old('movement_type') === 'adjustment' ? 'selected' : '' }}>{{ __('Adjustment') }}</option>
                                 <option value="write_off" {{ old('movement_type') === 'write_off' ? 'selected' : '' }}>{{ __('Write-off') }}</option>
                             </select>
@@ -39,12 +40,20 @@
                             <label for="movement_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Date') }} *</label>
                             <input type="date" id="movement_date" name="movement_date" value="{{ old('movement_date', now()->toDateString()) }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                         </div>
+                    <div class="col-span-2">
+                        <label for="destination_warehouse_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Destination Warehouse') }} (required for transfers) *</label>
+                        <select id="destination_warehouse_id" name="destination_warehouse_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            @foreach($warehouses as $w)
+                                <option value="{{ $w->id }}" {{ old('destination_warehouse_id') == $w->id ? 'selected' : '' }}>{{ $w->code }} - {{ $w->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label for="quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Quantity') }} *</label>
                             <input type="number" id="quantity" name="quantity" step="0.0001" value="{{ old('quantity') }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                            <p class="mt-1 text-xs text-gray-500">{{ __('Use negative for issue, transfer out, write-off') }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ __('Receipts/transfers/adjustments: positive. Issue/transfer out/write-off: negative.') }}</p>
                         </div>
                         <div>
                             <label for="unit_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit cost') }}</label>

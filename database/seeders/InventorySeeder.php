@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 use App\Modules\InventoryValuation\Application\InventoryValuationService;
+use App\Modules\InventoryValuation\Infrastructure\Models\InventoryBalance;
+use App\Modules\InventoryValuation\Infrastructure\Models\InventoryFifoLayer;
+use App\Modules\InventoryValuation\Infrastructure\Models\InventoryMovement;
 use App\Modules\InventoryValuation\Infrastructure\Models\InventoryItem;
 use App\Modules\InventoryValuation\Infrastructure\Models\Warehouse;
 use Illuminate\Database\Seeder;
@@ -10,8 +13,13 @@ use Illuminate\Database\Seeder;
 class InventorySeeder extends Seeder
 {
     /**
+     * Seed deterministic demo data for Inventory Control.
+     * - Includes both weighted-average and FIFO items
+     * - Covers partial consumption, write-offs, adjustments, and transfers
+     * - Resets only demo-related movements/balances/layers (not master data)
+     */
+    /**
      * Seed company-owned inventory (balance sheet assets).
-     * Typical examples: packaging materials, spare parts, consumables.
      */
     public function run(): void
     {
@@ -35,97 +43,109 @@ class InventorySeeder extends Seeder
             ]
         );
 
-        // Packaging – pallets (company-owned, balance sheet asset)
-        $pallets = InventoryItem::firstOrCreate(
-            ['code' => 'INV-PALLET'],
+        // Two demo items:
+        // - INV-WA-FOAM: weighted-average valuation
+        // - INV-FIFO-SCREW: FIFO valuation (partial consumption + transfers)
+        $waItem = InventoryItem::firstOrCreate(
+            ['code' => 'INV-WA-FOAM'],
             [
-                'name' => 'Wooden pallet (1200x800)',
-                'sku' => 'PAL-STD',
+                'name' => 'Foam packing insert',
+                'sku' => 'FOAM-001',
                 'unit' => 'EA',
-                'valuation_method' => 'weighted_average',
+                'valuation_method' => 'weighted_avg',
                 'is_active' => true,
             ]
         );
+        $waItem->update([
+            'valuation_method' => 'weighted_avg',
+            'is_active' => true,
+        ]);
 
-        // Packaging – stretch wrap
-        $stretchWrap = InventoryItem::firstOrCreate(
-            ['code' => 'INV-STRETCH'],
+        $fifoItem = InventoryItem::firstOrCreate(
+            ['code' => 'INV-FIFO-SCREW'],
             [
-                'name' => 'Stretch wrap roll (500mm)',
-                'sku' => 'WRAP-500',
-                'unit' => 'ROLL',
-                'valuation_method' => 'weighted_average',
-                'is_active' => true,
-            ]
-        );
-
-        // Packaging – carton boxes
-        $cartons = InventoryItem::firstOrCreate(
-            ['code' => 'INV-CARTON'],
-            [
-                'name' => 'Carton box (assorted)',
-                'sku' => 'CTN-ASST',
+                'name' => 'Steel screw pack',
+                'sku' => 'SCREW-STD',
                 'unit' => 'EA',
-                'valuation_method' => 'weighted_average',
+                'valuation_method' => 'fifo',
                 'is_active' => true,
             ]
         );
+        $fifoItem->update([
+            'valuation_method' => 'fifo',
+            'is_active' => true,
+        ]);
 
-        // Consumables – packing tape
-        $tape = InventoryItem::firstOrCreate(
-            ['code' => 'INV-TAPE'],
-            [
-                'name' => 'Packing tape roll',
-                'sku' => 'TAPE-48',
-                'unit' => 'ROLL',
-                'valuation_method' => 'weighted_average',
-                'is_active' => true,
-            ]
-        );
+        // Reset only demo movements/balances/layers for the seeded items/warehouses.
+        $this->resetDemoData([$wh1, $wh2], [$waItem, $fifoItem]);
 
-        // Spare parts / consumables – e.g. forklift or equipment
-        $sparePart = InventoryItem::firstOrCreate(
-            ['code' => 'INV-SPARE'],
-            [
-                'name' => 'Forklift filter (oil/air)',
-                'sku' => 'SP-FLT-01',
-                'unit' => 'EA',
-                'valuation_method' => 'weighted_average',
-                'is_active' => true,
-            ]
-        );
+        // --- Weighted Average Item (INV-WA-FOAM) ---
+        // Receipts with different costs -> weighted average unit cost.
+        $service->recordMovement($wh1->id, $waItem->id, 'receipt', 100, 10.00, 'PO-WA-001', now()->subDays(20)->toDateString(), null);
+        $service->recordMovement($wh1->id, $waItem->id, 'receipt', 100, 20.00, 'PO-WA-002', now()->subDays(15)->toDateString(), null);
+        $service->recordMovement($wh1->id, $waItem->id, 'issue', -50, 0, 'OUT-WA-001', now()->subDays(10)->toDateString(), 'Assembly use');
 
-        // --- Pallets: receipts and issues, valued cost ---
-        if ($pallets->movements()->count() === 0) {
-            $service->recordMovement($wh1->id, $pallets->id, 'receipt', 200, 12.50, 'PO-PAL-001', now()->subDays(30)->toDateString(), 'Initial pallet stock');
-            $service->recordMovement($wh1->id, $pallets->id, 'issue', -45, 0, 'OUT-OPS', now()->subDays(14)->toDateString(), 'Operations use');
-            $service->recordMovement($wh1->id, $pallets->id, 'receipt', 80, 13.00, 'PO-PAL-002', now()->subDays(7)->toDateString(), null);
+        // Transfer (out/in) between warehouses
+        // After above: qty=150, unit_cost=15. Transfer out 30 -> dest receives at 15.
+        $service->recordMovement($wh1->id, $waItem->id, 'transfer_out', -30, 0, 'TRF-WA-001', now()->subDays(8)->toDateString(), 'Transfer to secondary');
+        $service->recordMovement($wh2->id, $waItem->id, 'transfer_in', 30, 15.00, 'TRF-WA-001', now()->subDays(8)->toDateString(), 'Transfer received');
+
+        // Write-off in destination warehouse
+        $service->recordMovement($wh2->id, $waItem->id, 'write_off', -10, 0, 'WO-WA-001', now()->subDays(3)->toDateString(), 'Damaged items');
+
+        // Adjustment (add) in origin warehouse
+        $service->recordMovement($wh1->id, $waItem->id, 'adjustment', 10, 12.00, 'ADJ-WA-001', now()->subDays(2)->toDateString(), 'Cycle-count correction (add)');
+
+        // --- FIFO Item (INV-FIFO-SCREW) ---
+        // Multiple receipts at different costs -> partial issue consumes multiple layers.
+        $service->recordMovement($wh1->id, $fifoItem->id, 'receipt', 100, 1.00, 'PO-FIFO-001', now()->subDays(30)->toDateString(), 'Receipt layer A');
+        $service->recordMovement($wh1->id, $fifoItem->id, 'receipt', 50, 2.00, 'PO-FIFO-002', now()->subDays(20)->toDateString(), 'Receipt layer B');
+
+        // Partial issue: consume 100@1.00 + 20@2.00 => remaining 30@2.00
+        $service->recordMovement($wh1->id, $fifoItem->id, 'issue', -120, 0, 'OUT-FIFO-001', now()->subDays(10)->toDateString(), 'Issue consuming multiple layers');
+
+        // Consume remaining -> balance hits zero
+        $service->recordMovement($wh1->id, $fifoItem->id, 'issue', -30, 0, 'OUT-FIFO-002', now()->subDays(5)->toDateString(), 'Final layer consumption');
+
+        // Adjustment (inbound) creates a new layer
+        $service->recordMovement($wh1->id, $fifoItem->id, 'adjustment', 10, 1.50, 'ADJ-FIFO-001', now()->subDays(2)->toDateString(), 'Cycle-count correction (add)');
+
+        // Write-off consumes FIFO layer
+        $service->recordMovement($wh1->id, $fifoItem->id, 'write_off', -5, 0, 'WO-FIFO-001', now()->subDays(1)->toDateString(), 'Write-off');
+
+        // Transfer remaining (at 1.50) from main to secondary
+        $service->recordMovement($wh1->id, $fifoItem->id, 'transfer_out', -3, 0, 'TRF-FIFO-001', now()->subDays(1)->toDateString(), 'Transfer to secondary');
+        $service->recordMovement($wh2->id, $fifoItem->id, 'transfer_in', 3, 1.50, 'TRF-FIFO-001', now()->subDays(1)->toDateString(), 'Transfer received');
+    }
+
+    /**
+     * Reset demo movements/balances/layers for the given demo items.
+     *
+     * @param  array<int, Warehouse>  $warehouses
+     * @param  array<int, InventoryItem>  $items
+     */
+    protected function resetDemoData(array $warehouses, array $items): void
+    {
+        $warehouseIds = array_values(array_map(fn ($w) => (int) $w->id, $warehouses));
+        $itemIds = array_values(array_map(fn ($i) => (int) $i->id, $items));
+
+        if (empty($warehouseIds) || empty($itemIds)) {
+            return;
         }
 
-        // --- Stretch wrap: receipts and issues ---
-        if ($stretchWrap->movements()->count() === 0) {
-            $service->recordMovement($wh1->id, $stretchWrap->id, 'receipt', 120, 8.75, 'PO-WRAP-01', now()->subDays(21)->toDateString(), null);
-            $service->recordMovement($wh1->id, $stretchWrap->id, 'issue', -30, 0, 'OUT-OPS', now()->subDays(10)->toDateString(), 'Packing');
-            $service->recordMovement($wh2->id, $stretchWrap->id, 'transfer_in', 20, 8.75, 'TRF-01', now()->subDays(5)->toDateString(), 'Transfer to secondary');
-        }
+        InventoryFifoLayer::query()
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->whereIn('item_id', $itemIds)
+            ->delete();
 
-        // --- Cartons: receipts and issues ---
-        if ($cartons->movements()->count() === 0) {
-            $service->recordMovement($wh1->id, $cartons->id, 'receipt', 500, 1.20, 'PO-CTN-01', now()->subDays(14)->toDateString(), 'Assorted cartons');
-            $service->recordMovement($wh1->id, $cartons->id, 'issue', -120, 0, 'OUT-OPS', now()->subDays(3)->toDateString(), 'Order packing');
-        }
+        InventoryMovement::query()
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->whereIn('item_id', $itemIds)
+            ->delete();
 
-        // --- Tape: receipts and issues ---
-        if ($tape->movements()->count() === 0) {
-            $service->recordMovement($wh1->id, $tape->id, 'receipt', 100, 3.50, 'PO-TAPE-01', now()->subDays(14)->toDateString(), null);
-            $service->recordMovement($wh1->id, $tape->id, 'issue', -25, 0, 'OUT-OPS', now()->subDays(5)->toDateString(), null);
-        }
-
-        // --- Spare parts: receipt and one adjustment (count correction) ---
-        if ($sparePart->movements()->count() === 0) {
-            $service->recordMovement($wh1->id, $sparePart->id, 'receipt', 24, 28.00, 'PO-SP-01', now()->subDays(10)->toDateString(), 'Forklift filters');
-            $service->recordMovement($wh1->id, $sparePart->id, 'issue', -4, 0, 'MNT-001', now()->subDays(2)->toDateString(), 'Maintenance use');
-            $service->recordMovement($wh1->id, $sparePart->id, 'adjustment', -1, 0, null, now()->subDay()->toDateString(), 'Count correction');
-        }
+        InventoryBalance::query()
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->whereIn('item_id', $itemIds)
+            ->delete();
     }
 }

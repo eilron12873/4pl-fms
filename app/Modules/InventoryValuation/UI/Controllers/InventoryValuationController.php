@@ -3,6 +3,7 @@
 namespace App\Modules\InventoryValuation\UI\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Core\Services\AuditService;
 use App\Modules\InventoryValuation\Application\InventoryValuationService;
 use App\Modules\InventoryValuation\Infrastructure\Models\InventoryItem;
 use App\Modules\InventoryValuation\Infrastructure\Models\InventoryMovement;
@@ -10,11 +11,14 @@ use App\Modules\InventoryValuation\Infrastructure\Models\Warehouse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class InventoryValuationController extends Controller
 {
     public function __construct(
         protected InventoryValuationService $valuation,
+        protected AuditService $audit,
     ) {
     }
 
@@ -67,23 +71,139 @@ class InventoryValuationController extends Controller
         $data = $request->validate([
             'warehouse_id' => ['required', 'exists:warehouses,id'],
             'item_id' => ['required', 'exists:inventory_items,id'],
-            'movement_type' => ['required', 'in:receipt,issue,transfer_in,transfer_out,adjustment,write_off'],
+            'movement_type' => ['required', 'in:receipt,issue,transfer_in,transfer_out,transfer,adjustment,write_off'],
             'quantity' => ['required', 'numeric'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'reference' => ['nullable', 'string', 'max:255'],
+            'destination_warehouse_id' => ['required_if:movement_type,transfer', 'nullable', 'exists:warehouses,id'],
             'movement_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
         ]);
-        $this->valuation->recordMovement(
-            (int) $data['warehouse_id'],
-            (int) $data['item_id'],
-            $data['movement_type'],
-            (float) $data['quantity'],
-            (float) ($data['unit_cost'] ?? 0),
-            $data['reference'] ?? null,
-            $data['movement_date'],
-            $data['notes'] ?? null,
-        );
+
+        $movementType = (string) $data['movement_type'];
+        $qty = (float) $data['quantity'];
+        $unitCostInput = $request->input('unit_cost'); // null when not provided
+
+        // Dedicated transfer workflow: record both legs atomically.
+        if ($movementType === 'transfer') {
+            $destinationWarehouseId = (int) $data['destination_warehouse_id'];
+            $originWarehouseId = (int) $data['warehouse_id'];
+
+            if ($destinationWarehouseId === $originWarehouseId) {
+                return redirect()->back()->withInput()->withErrors([
+                    'destination_warehouse_id' => __('Destination warehouse must be different from origin.'),
+                ]);
+            }
+
+            if ($qty <= 0) {
+                return redirect()->back()->withInput()->withErrors([
+                    'quantity' => __('Transfer quantity must be positive.'),
+                ]);
+            }
+            if ($unitCostInput === null) {
+                return redirect()->back()->withInput()->withErrors([
+                    'unit_cost' => __('Unit cost is required for transfers.'),
+                ]);
+            }
+
+            try {
+                $recordedMovements = [];
+                DB::transaction(function () use ($originWarehouseId, $destinationWarehouseId, $data, $qty, $unitCostInput, &$recordedMovements) {
+                    $effectiveUnitCost = (float) $unitCostInput;
+                    $recordedMovements[] = $this->valuation->recordMovement(
+                        $originWarehouseId,
+                        (int) $data['item_id'],
+                        'transfer_out',
+                        -$qty,
+                        $effectiveUnitCost,
+                        $data['reference'] ?? null,
+                        $data['movement_date'],
+                        $data['notes'] ?? null,
+                    );
+                    $recordedMovements[] = $this->valuation->recordMovement(
+                        $destinationWarehouseId,
+                        (int) $data['item_id'],
+                        'transfer_in',
+                        $qty,
+                        $effectiveUnitCost,
+                        $data['reference'] ?? null,
+                        $data['movement_date'],
+                        $data['notes'] ?? null,
+                    );
+                });
+
+                foreach ($recordedMovements as $movement) {
+                    $this->audit->log(
+                        description: 'Inventory transfer leg recorded',
+                        event: 'inventory.movement.recorded',
+                        subject: $movement,
+                        properties: [
+                            'warehouse_id' => $movement->warehouse_id,
+                            'item_id' => $movement->item_id,
+                            'movement_type' => $movement->movement_type,
+                            'quantity' => (float) $movement->quantity,
+                            'reference' => $movement->reference,
+                        ],
+                    );
+                }
+            } catch (InvalidArgumentException $e) {
+                return redirect()->back()->withInput()->withErrors([
+                    'quantity' => __($e->getMessage()),
+                ]);
+            }
+
+            return redirect()->route('inventory-valuation.movements.index')->with('success', __('Transfer recorded.'));
+        }
+
+        $inboundTypes = ['receipt', 'transfer_in', 'adjustment'];
+        if (in_array($movementType, $inboundTypes, true)) {
+            if ($qty <= 0) {
+                return redirect()->back()->withInput()->withErrors([
+                    'quantity' => __('Inbound movements require positive quantity.'),
+                ]);
+            }
+            if ($unitCostInput === null) {
+                return redirect()->back()->withInput()->withErrors([
+                    'unit_cost' => __('Unit cost is required for inbound movements.'),
+                ]);
+            }
+        } else {
+            if ($qty >= 0) {
+                return redirect()->back()->withInput()->withErrors([
+                    'quantity' => __('Outbound movements require negative quantity.'),
+                ]);
+            }
+        }
+
+        try {
+            $movement = $this->valuation->recordMovement(
+                (int) $data['warehouse_id'],
+                (int) $data['item_id'],
+                $movementType,
+                $qty,
+                (float) ($data['unit_cost'] ?? 0),
+                $data['reference'] ?? null,
+                $data['movement_date'],
+                $data['notes'] ?? null,
+            );
+
+            $this->audit->log(
+                description: 'Inventory movement recorded',
+                event: 'inventory.movement.recorded',
+                subject: $movement,
+                properties: [
+                    'warehouse_id' => $movement->warehouse_id,
+                    'item_id' => $movement->item_id,
+                    'movement_type' => $movement->movement_type,
+                    'quantity' => (float) $movement->quantity,
+                    'reference' => $movement->reference,
+                ],
+            );
+        } catch (InvalidArgumentException $e) {
+            return redirect()->back()->withInput()->withErrors([
+                'quantity' => __($e->getMessage()),
+            ]);
+        }
         return redirect()->route('inventory-valuation.movements.index')->with('success', __('Movement recorded.'));
     }
 
@@ -119,19 +239,59 @@ class InventoryValuationController extends Controller
             'movement_date' => ['required', 'date'],
         ]);
         $qty = (float) $data['quantity'];
+
+        if ($data['type'] === 'adjustment') {
+            if ($qty <= 0) {
+                return redirect()->back()->withInput()->withErrors([
+                    'quantity' => __('Adjustment (add) requires positive quantity.'),
+                ]);
+            }
+            if ($request->input('unit_cost') === null) {
+                return redirect()->back()->withInput()->withErrors([
+                    'unit_cost' => __('Unit cost is required for adjustments (add).'),
+                ]);
+            }
+        }
+
         if ($data['type'] === 'write_off' && $qty > 0) {
             $qty = -$qty;
         }
-        $this->valuation->recordMovement(
-            (int) $data['warehouse_id'],
-            (int) $data['item_id'],
-            $data['type'],
-            $qty,
-            (float) ($data['unit_cost'] ?? 0),
-            null,
-            $data['movement_date'],
-            $data['reason'] ?? null,
-        );
+
+        if ($data['type'] === 'write_off' && abs($qty) <= 0) {
+            return redirect()->back()->withInput()->withErrors([
+                'quantity' => __('Write-off quantity must be non-zero.'),
+            ]);
+        }
+
+        try {
+            $movement = $this->valuation->recordMovement(
+                (int) $data['warehouse_id'],
+                (int) $data['item_id'],
+                $data['type'],
+                $qty,
+                (float) ($data['unit_cost'] ?? 0),
+                null,
+                $data['movement_date'],
+                $data['reason'] ?? null,
+            );
+
+            $this->audit->log(
+                description: 'Inventory adjustment/write-off recorded',
+                event: 'inventory.movement.recorded',
+                subject: $movement,
+                properties: [
+                    'warehouse_id' => $movement->warehouse_id,
+                    'item_id' => $movement->item_id,
+                    'movement_type' => $movement->movement_type,
+                    'quantity' => (float) $movement->quantity,
+                    'reference' => $movement->reference,
+                ],
+            );
+        } catch (InvalidArgumentException $e) {
+            return redirect()->back()->withInput()->withErrors([
+                'quantity' => __($e->getMessage()),
+            ]);
+        }
         return redirect()->route('inventory-valuation.adjustments.index')->with('success', __('Adjustment recorded.'));
     }
 
