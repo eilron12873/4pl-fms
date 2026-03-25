@@ -24,7 +24,19 @@
                     </div>
                     <div>
                         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Status') }}</dt>
-                        <dd class="mt-1"><span class="px-2 py-0.5 rounded text-xs {{ $journal->status === 'posted' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $journal->status }}</span></dd>
+                        <dd class="mt-1">
+                            <span class="px-2 py-0.5 rounded text-xs {{
+                                $journal->status === 'posted'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                    : ($journal->status === 'pending_approval'
+                                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                                        : ($journal->status === 'rejected'
+                                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                        )
+                                    )
+                            }}">{{ $journal->status }}</span>
+                        </dd>
                     </div>
                     <div class="sm:col-span-2">
                         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Description') }}</dt>

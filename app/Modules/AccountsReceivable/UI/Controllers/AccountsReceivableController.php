@@ -5,9 +5,12 @@ namespace App\Modules\AccountsReceivable\UI\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\AccountsReceivable\Application\ArReportingService;
 use App\Modules\AccountsReceivable\Application\InvoiceService;
+use App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoiceAdjustment;
 use App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoice;
 use App\Modules\AccountsReceivable\Infrastructure\Models\ArPayment;
 use App\Modules\BillingEngine\Infrastructure\Models\BillingClient;
+use App\Modules\ApprovalWorkflows\Application\ApprovalWorkflowService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,6 +20,7 @@ class AccountsReceivableController extends Controller
     public function __construct(
         protected InvoiceService $invoiceService,
         protected ArReportingService $reporting,
+        protected ApprovalWorkflowService $approvalWorkflows,
     ) {
     }
 
@@ -70,8 +74,8 @@ class AccountsReceivableController extends Controller
     public function invoiceEdit(int $id): View|RedirectResponse
     {
         $invoice = ArInvoice::with('lines')->findOrFail($id);
-        if ($invoice->isIssued()) {
-            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Cannot edit an issued invoice.'));
+        if (! $invoice->isDraft()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Can only edit draft invoices.'));
         }
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
         return view('accounts-receivable::invoices.edit', compact('invoice', 'clients'));
@@ -80,8 +84,8 @@ class AccountsReceivableController extends Controller
     public function invoiceUpdate(Request $request, int $id): RedirectResponse
     {
         $invoice = ArInvoice::findOrFail($id);
-        if ($invoice->isIssued()) {
-            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Cannot edit an issued invoice.'));
+        if (! $invoice->isDraft()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Can only edit draft invoices.'));
         }
         $data = $request->validate([
             'client_id' => ['required', 'exists:billing_clients,id'],
@@ -106,14 +110,104 @@ class AccountsReceivableController extends Controller
     public function invoiceShow(int $id): View
     {
         $invoice = ArInvoice::with(['client', 'lines.journal', 'adjustments'])->findOrFail($id);
-        return view('accounts-receivable::invoices.show', compact('invoice'));
+        $pendingCreditSum = ArInvoiceAdjustment::query()
+            ->where('invoice_id', $invoice->id)
+            ->where('type', 'credit_note')
+            ->where('status', 'pending_approval')
+            ->sum('amount'); // negative amounts
+
+        $pendingCreditAbs = (float) (-$pendingCreditSum);
+        $availableCreditNoteMax = max((float) $invoice->balance_due - $pendingCreditAbs, 0.0);
+
+        return view('accounts-receivable::invoices.show', compact('invoice', 'availableCreditNoteMax'));
     }
 
     public function issueInvoice(int $id): RedirectResponse
     {
         $invoice = ArInvoice::findOrFail($id);
-        $this->invoiceService->issueInvoice($invoice);
-        return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice issued.'));
+        try {
+            $this->invoiceService->issueInvoice($invoice);
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice issued.'));
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __($e->getMessage()));
+        }
+    }
+
+    public function invoiceSubmit(int $id): RedirectResponse
+    {
+        $invoice = ArInvoice::findOrFail($id);
+        if (! $invoice->isDraft()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Only draft invoices can be submitted for approval.'));
+        }
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $this->approvalWorkflows->requestApproval(
+            approvable: $invoice,
+            approvalType: 'ar_invoice',
+            requestedBy: $userId,
+            comments: null,
+            metadata: ['source' => 'ui.invoiceSubmit']
+        );
+        $invoice->update(['status' => 'pending_approval']);
+
+        return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice submitted for approval.'));
+    }
+
+    public function invoiceApprove(int $id): RedirectResponse
+    {
+        $invoice = ArInvoice::findOrFail($id);
+        if (! $invoice->isPendingApproval()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Only pending invoices can be approved.'));
+        }
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $approval = $this->approvalWorkflows->requestApproval(
+            approvable: $invoice,
+            approvalType: 'ar_invoice',
+            requestedBy: $userId,
+            comments: null,
+            metadata: ['source' => 'ui.invoiceApprove']
+        );
+        $this->approvalWorkflows->approve($approval, $userId, null);
+
+        $invoice->update(['status' => 'approved']);
+
+        return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice approved.'));
+    }
+
+    public function invoiceReject(int $id, Request $request): RedirectResponse
+    {
+        $invoice = ArInvoice::findOrFail($id);
+        if (! $invoice->isPendingApproval()) {
+            return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Only pending invoices can be rejected.'));
+        }
+
+        $data = $request->validate([
+            'comments' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $approval = $this->approvalWorkflows->requestApproval(
+            approvable: $invoice,
+            approvalType: 'ar_invoice',
+            requestedBy: $userId,
+            comments: null,
+            metadata: ['source' => 'ui.invoiceReject']
+        );
+        $this->approvalWorkflows->reject($approval, $userId, $data['comments'] ?? null);
+
+        $invoice->update(['status' => 'draft']);
+
+        return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice rejected back to draft.'));
     }
 
     public function statement(Request $request): View
@@ -181,11 +275,42 @@ class AccountsReceivableController extends Controller
     {
         $invoice = ArInvoice::findOrFail($invoiceId);
         $balanceDue = (float) $invoice->total - (float) $invoice->amount_allocated;
+
+        $pendingCreditSum = ArInvoiceAdjustment::query()
+            ->where('invoice_id', $invoice->id)
+            ->where('type', 'credit_note')
+            ->where('status', 'pending_approval')
+            ->sum('amount'); // negative amounts
+        $pendingCreditAbs = (float) (-$pendingCreditSum);
+        $availableMax = max($balanceDue - $pendingCreditAbs, 0.0);
+
+        if ($availableMax < 0.01) {
+            return redirect()->route('accounts-receivable.invoices.show', $invoiceId)->with('error', __('Cannot request a credit note: available credit note capacity is zero.'));
+        }
+
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $balanceDue],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $availableMax],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
-        $this->invoiceService->createCreditNote($invoice, (float) $data['amount'], $data['reason'] ?? '');
-        return redirect()->route('accounts-receivable.invoices.show', $invoiceId)->with('success', __('Credit note created.'));
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $adjustment = $this->invoiceService->requestCreditNote(
+            $invoice,
+            (float) $data['amount'],
+            (string) ($data['reason'] ?? ''),
+        );
+
+        $this->approvalWorkflows->requestApproval(
+            approvable: $adjustment,
+            approvalType: 'credit_note',
+            requestedBy: $userId,
+            comments: $data['reason'] ?? null,
+            metadata: ['source' => 'ui.creditNoteStore', 'invoice_id' => $invoice->id, 'adjustment_id' => $adjustment->id],
+        );
+
+        return redirect()->route('accounts-receivable.invoices.show', $invoiceId)->with('success', __('Credit note requested for approval.'));
     }
 }

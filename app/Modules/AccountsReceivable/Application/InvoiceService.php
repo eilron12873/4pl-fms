@@ -228,6 +228,11 @@ class InvoiceService
         if ($invoice->isIssued()) {
             return;
         }
+        // Approval-gating MVP: only block issuing when an invoice is explicitly pending approval.
+        // Draft invoices can still be issued via the manual entry flow.
+        if ($invoice->isPendingApproval() || $invoice->isRejected()) {
+            throw new \InvalidArgumentException('Only approved invoices can be issued.');
+        }
         $receivableCode = $accountCodes['receivable'] ?? '121100';
         $revenueCode = $accountCodes['revenue'] ?? '423000';
         $total = (float) $invoice->total;
@@ -292,15 +297,27 @@ class InvoiceService
     }
 
     /**
-     * Create credit note adjustment and optionally post reversal journal.
+     * Create credit note adjustment and post its reversing journal immediately.
+     *
+     * Backwards-compatible entry point: for approval-gated flows use
+     * {@see requestCreditNote()} + {@see approveCreditNoteRequest()} instead.
      */
     public function createCreditNote(ArInvoice $invoice, float $amount, string $reason = '', array $accountCodes = []): ArInvoiceAdjustment
     {
-        $receivableCode = $accountCodes['receivable'] ?? '121100';
-        $revenueCode = $accountCodes['revenue'] ?? '423000';
+        $adjustment = $this->requestCreditNote($invoice, $amount, $reason);
 
-        return DB::transaction(function () use ($invoice, $amount, $reason, $receivableCode, $revenueCode) {
+        return $this->approveCreditNoteRequest($adjustment, $accountCodes);
+    }
+
+    /**
+     * Create a credit note request (pending approval). Does NOT post any journal
+     * and does NOT affect invoice totals until approved.
+     */
+    public function requestCreditNote(ArInvoice $invoice, float $amount, string $reason = '', array $accountCodes = []): ArInvoiceAdjustment
+    {
+        return DB::transaction(function () use ($invoice, $amount, $reason) {
             $adjNumber = 'CN-' . $invoice->invoice_number . '-' . ($invoice->adjustments()->count() + 1);
+
             $adjustment = ArInvoiceAdjustment::create([
                 'invoice_id' => $invoice->id,
                 'type' => 'credit_note',
@@ -308,22 +325,90 @@ class InvoiceService
                 'amount' => -abs($amount),
                 'reason' => $reason,
                 'adjustment_date' => now()->toDateString(),
+                'status' => 'pending_approval',
+                'journal_id' => null,
             ]);
+
+            return $adjustment->fresh();
+        });
+    }
+
+    /**
+     * Approve + post a pending credit note request.
+     */
+    public function approveCreditNoteRequest(ArInvoiceAdjustment $adjustment, array $accountCodes = []): ArInvoiceAdjustment
+    {
+        $receivableCode = $accountCodes['receivable'] ?? '121100';
+        $revenueCode = $accountCodes['revenue'] ?? '423000';
+
+        return DB::transaction(function () use ($adjustment, $receivableCode, $revenueCode) {
+            /** @var ArInvoiceAdjustment $locked */
+            $locked = ArInvoiceAdjustment::query()->whereKey($adjustment->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->isPosted()) {
+                return $locked->fresh();
+            }
+            if ($locked->isRejected()) {
+                throw new \InvalidArgumentException('Rejected credit note requests cannot be approved.');
+            }
+            if (! $locked->isPendingApproval()) {
+                throw new \InvalidArgumentException('Only pending credit note requests can be approved.');
+            }
+
+            $invoice = $locked->invoice()->firstOrFail();
+
+            $amountAbs = abs((float) $locked->amount);
+            if ($amountAbs <= 0) {
+                throw new \InvalidArgumentException('Credit note amount must be > 0.');
+            }
 
             $journal = $this->journalService->post(
                 [
-                    ['account_code' => $revenueCode, 'debit' => abs($amount), 'credit' => 0, 'client_id' => $invoice->client_id],
-                    ['account_code' => $receivableCode, 'debit' => 0, 'credit' => abs($amount), 'client_id' => $invoice->client_id],
+                    ['account_code' => $revenueCode, 'debit' => $amountAbs, 'credit' => 0, 'client_id' => $invoice->client_id],
+                    ['account_code' => $receivableCode, 'debit' => 0, 'credit' => $amountAbs, 'client_id' => $invoice->client_id],
                 ],
                 [
-                    'description' => 'Credit note ' . $adjNumber . ' - ' . $reason,
-                    'journal_date' => $adjustment->adjustment_date->toDateString(),
-                    'journal_number' => $adjNumber,
+                    'description' => 'Credit note ' . $locked->adjustment_number . ' - ' . ($locked->reason ?? ''),
+                    'journal_date' => $locked->adjustment_date->toDateString(),
+                    'journal_number' => $locked->adjustment_number,
                 ],
             );
-            $adjustment->update(['journal_id' => $journal->id]);
+
+            $locked->update([
+                'journal_id' => $journal->id,
+                'status' => 'posted',
+            ]);
+
             $this->recalculateInvoiceTotals($invoice->fresh());
-            return $adjustment->fresh();
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * Reject a pending credit note request. Does NOT post journals.
+     */
+    public function rejectCreditNoteRequest(ArInvoiceAdjustment $adjustment): ArInvoiceAdjustment
+    {
+        return DB::transaction(function () use ($adjustment) {
+            /** @var ArInvoiceAdjustment $locked */
+            $locked = ArInvoiceAdjustment::query()->whereKey($adjustment->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->isRejected()) {
+                return $locked->fresh();
+            }
+            if ($locked->isPosted()) {
+                throw new \InvalidArgumentException('Posted credit note requests cannot be rejected.');
+            }
+            if (! $locked->isPendingApproval()) {
+                throw new \InvalidArgumentException('Only pending credit note requests can be rejected.');
+            }
+
+            $locked->update([
+                'status' => 'rejected',
+            ]);
+
+            return $locked->fresh();
         });
     }
 
@@ -331,7 +416,9 @@ class InvoiceService
     {
         $invoice->load(['lines', 'adjustments']);
         $subtotal = $invoice->lines->sum('amount');
-        $adjustmentsTotal = $invoice->adjustments->sum('amount');
+        $adjustmentsTotal = $invoice->adjustments
+            ->where('status', 'posted')
+            ->sum('amount');
         $invoice->update([
             'subtotal' => $subtotal,
             'total' => $subtotal + $adjustmentsTotal,

@@ -65,6 +65,26 @@ class ArInvoice extends Model
         return $this->status === 'paid';
     }
 
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
     public function isIssued(): bool
     {
         return in_array($this->status, ['issued', 'partially_paid', 'paid'], true);

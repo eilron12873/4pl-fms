@@ -9,9 +9,12 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard.index');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
-// Important: Breeze Auth controllers use route('dashboard') by default. We align them to dashboard.index in controllers and AppServiceProvider.
+// Compatibility alias for modules referencing `dashboard.index`.
+Route::get('/dashboard-index', function () {
+    return redirect()->route('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard.index');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

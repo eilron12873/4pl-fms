@@ -288,11 +288,20 @@ class BillService
      */
     public function createCreditNote(ApBill $bill, float $amount, string $reason = '', array $accountCodes = []): ApBillAdjustment
     {
-        $payableCode = $accountCodes['payable'] ?? '211100';
-        $expenseCode = $accountCodes['expense'] ?? '530000';
+        $adjustment = $this->requestCreditNote($bill, $amount, $reason);
 
-        return DB::transaction(function () use ($bill, $amount, $reason, $payableCode, $expenseCode) {
+        return $this->approveCreditNoteRequest($adjustment, $accountCodes);
+    }
+
+    /**
+     * Create a vendor credit note request (pending approval).
+     * Does NOT post any journal and does NOT affect bill totals until approved.
+     */
+    public function requestCreditNote(ApBill $bill, float $amount, string $reason = '', array $accountCodes = []): ApBillAdjustment
+    {
+        return DB::transaction(function () use ($bill, $amount, $reason) {
             $adjNumber = 'CN-' . $bill->bill_number . '-' . ($bill->adjustments()->count() + 1);
+
             $adjustment = ApBillAdjustment::create([
                 'bill_id' => $bill->id,
                 'type' => 'credit_note',
@@ -300,22 +309,89 @@ class BillService
                 'amount' => -abs($amount),
                 'reason' => $reason,
                 'adjustment_date' => now()->toDateString(),
+                'status' => 'pending_approval',
+                'journal_id' => null,
             ]);
+
+            return $adjustment->fresh();
+        });
+    }
+
+    /**
+     * Approve + post a pending credit note request.
+     */
+    public function approveCreditNoteRequest(ApBillAdjustment $adjustment, array $accountCodes = []): ApBillAdjustment
+    {
+        $payableCode = $accountCodes['payable'] ?? '211100';
+        $expenseCode = $accountCodes['expense'] ?? '530000';
+
+        return DB::transaction(function () use ($adjustment, $payableCode, $expenseCode) {
+            /** @var ApBillAdjustment $locked */
+            $locked = ApBillAdjustment::query()->whereKey($adjustment->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->isPosted()) {
+                return $locked->fresh();
+            }
+            if ($locked->isRejected()) {
+                throw new \InvalidArgumentException('Rejected credit note requests cannot be approved.');
+            }
+            if (! $locked->isPendingApproval()) {
+                throw new \InvalidArgumentException('Only pending credit note requests can be approved.');
+            }
+
+            $bill = $locked->bill()->firstOrFail();
+            $amountAbs = abs((float) $locked->amount);
+            if ($amountAbs <= 0) {
+                throw new \InvalidArgumentException('Credit note amount must be > 0.');
+            }
 
             $journal = $this->journalService->post(
                 [
-                    ['account_code' => $payableCode, 'debit' => abs($amount), 'credit' => 0],
-                    ['account_code' => $expenseCode, 'debit' => 0, 'credit' => abs($amount)],
+                    ['account_code' => $payableCode, 'debit' => $amountAbs, 'credit' => 0],
+                    ['account_code' => $expenseCode, 'debit' => 0, 'credit' => $amountAbs],
                 ],
                 [
-                    'description' => 'Vendor credit note ' . $adjNumber . ' - ' . $reason,
-                    'journal_date' => $adjustment->adjustment_date->toDateString(),
-                    'journal_number' => $adjNumber,
+                    'description' => 'Vendor credit note ' . $locked->adjustment_number . ' - ' . ($locked->reason ?? ''),
+                    'journal_date' => $locked->adjustment_date->toDateString(),
+                    'journal_number' => $locked->adjustment_number,
                 ],
             );
-            $adjustment->update(['journal_id' => $journal->id]);
+
+            $locked->update([
+                'journal_id' => $journal->id,
+                'status' => 'posted',
+            ]);
+
             $this->recalculateBillTotals($bill->fresh());
-            return $adjustment->fresh();
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * Reject a pending vendor credit note request. Does NOT post journals.
+     */
+    public function rejectCreditNoteRequest(ApBillAdjustment $adjustment): ApBillAdjustment
+    {
+        return DB::transaction(function () use ($adjustment) {
+            /** @var ApBillAdjustment $locked */
+            $locked = ApBillAdjustment::query()->whereKey($adjustment->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->isRejected()) {
+                return $locked->fresh();
+            }
+            if ($locked->isPosted()) {
+                throw new \InvalidArgumentException('Posted credit note requests cannot be rejected.');
+            }
+            if (! $locked->isPendingApproval()) {
+                throw new \InvalidArgumentException('Only pending credit note requests can be rejected.');
+            }
+
+            $locked->update([
+                'status' => 'rejected',
+            ]);
+
+            return $locked->fresh();
         });
     }
 
@@ -323,7 +399,9 @@ class BillService
     {
         $bill->load(['lines', 'adjustments']);
         $subtotal = $bill->lines->sum('amount');
-        $adjustmentsTotal = $bill->adjustments->sum('amount');
+        $adjustmentsTotal = $bill->adjustments
+            ->where('status', 'posted')
+            ->sum('amount');
         $bill->update([
             'subtotal' => $subtotal,
             'total' => $subtotal + $adjustmentsTotal,

@@ -23,12 +23,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RedirectIfAuthenticated::redirectUsing(function (Request $request): string {
-            if (Route::has('dashboard.index')) {
-                return route('dashboard.index');
-            }
-
             if (Route::has('dashboard')) {
                 return route('dashboard');
+            }
+
+            if (Route::has('dashboard.index')) {
+                return route('dashboard.index');
             }
 
             return '/';

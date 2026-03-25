@@ -16,6 +16,7 @@
                     <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Status') }}</label>
                     <select id="status" name="status" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                         <option value="">{{ __('All') }}</option>
+                        <option value="received" @selected(request('status') === 'received')>{{ __('Received') }}</option>
                         <option value="posted" @selected(request('status') === 'posted')>{{ __('Posted') }}</option>
                         <option value="accepted" @selected(request('status') === 'accepted')>{{ __('Accepted') }}</option>
                         <option value="duplicate" @selected(request('status') === 'duplicate')>{{ __('Duplicate') }}</option>
@@ -55,7 +56,9 @@
                                 <td class="px-4 py-2">{{ $log->source_system }}</td>
                                 <td class="px-4 py-2">{{ $log->source_reference }}</td>
                                 <td class="px-4 py-2">
-                                    @if($log->status === 'posted')
+                                    @if($log->status === 'received')
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300">received</span>
+                                    @elseif($log->status === 'posted')
                                         <span class="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">posted</span>
                                     @elseif($log->status === 'accepted')
                                         <span class="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">accepted</span>

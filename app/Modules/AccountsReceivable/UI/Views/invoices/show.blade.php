@@ -16,14 +16,25 @@
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Total') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($invoice->total, 2) }} {{ $invoice->currency }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Balance due') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ number_format($invoice->balance_due, 2) }} {{ $invoice->currency }}</dd></div>
             </dl>
-            @if(!$invoice->isIssued() && auth()->user()?->can('accounts-receivable.manage'))
-                <div class="mt-4 flex gap-2">
-                    <a href="{{ route('accounts-receivable.invoices.edit', $invoice->id) }}" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Edit invoice') }}</a>
-                    <form method="POST" action="{{ route('accounts-receivable.invoices.issue', $invoice->id) }}">
-                        @csrf
-                        <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue invoice') }}</button>
-                    </form>
-                </div>
+            @if(auth()->user()?->can('accounts-receivable.manage'))
+                @if($invoice->isDraft())
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <a href="{{ route('accounts-receivable.invoices.edit', $invoice->id) }}" class="inline-flex px-4 py-2 rounded-md bg-gray-600 text-white text-sm hover:bg-gray-700">{{ __('Edit invoice') }}</a>
+                        <form method="POST" action="{{ route('accounts-receivable.invoices.submit-approval', $invoice->id) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Submit for approval') }}</button>
+                        </form>
+                    </div>
+                @elseif($invoice->isPendingApproval())
+                    <div class="mt-4 text-sm text-gray-600 dark:text-gray-300">{{ __('Waiting for approval.') }}</div>
+                @elseif($invoice->isApproved())
+                    <div class="mt-4 flex gap-2">
+                        <form method="POST" action="{{ route('accounts-receivable.invoices.issue', $invoice->id) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">{{ __('Issue invoice') }}</button>
+                        </form>
+                    </div>
+                @endif
             @endif
         </div>
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
@@ -76,14 +87,14 @@
                 </table>
             </div>
         @endif
-        @if($invoice->isIssued() && $invoice->balance_due > 0 && auth()->user()?->can('accounts-receivable.manage'))
+        @if($invoice->isIssued() && ($availableCreditNoteMax ?? 0) > 0 && auth()->user()?->can('accounts-receivable.manage'))
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Credit note') }}</h3>
                 <form method="POST" action="{{ route('accounts-receivable.invoices.credit-note', $invoice->id) }}" class="flex flex-wrap gap-4 items-end">
                     @csrf
                     <div>
                         <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Amount') }}</label>
-                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" max="{{ $invoice->balance_due }}" value="{{ $invoice->balance_due }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm w-32">
+                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" max="{{ $availableCreditNoteMax }}" value="{{ $availableCreditNoteMax }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm w-32">
                     </div>
                     <div>
                         <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Reason') }}</label>

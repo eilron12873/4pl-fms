@@ -13,6 +13,7 @@ use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CoreAccounting\Infrastructure\Models\PostingSource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 
 class FinancialEventController extends Controller
@@ -60,6 +61,17 @@ class FinancialEventController extends Controller
             ]);
         }
 
+        // Lifecycle traceability: the event is received and will be processed next.
+        $integrationLog = IntegrationLog::create([
+            'event_type' => $event_type,
+            'idempotency_key' => $data['idempotency_key'],
+            'source_system' => $data['source_system'],
+            'source_reference' => $data['source_reference'],
+            'status' => IntegrationLog::STATUS_RECEIVED,
+            'journal_id' => null,
+            'message' => null,
+        ]);
+
         try {
             $result = $this->dispatcher->dispatch($event_type, $data['payload'], [
                 'idempotency_key' => $data['idempotency_key'],
@@ -67,14 +79,29 @@ class FinancialEventController extends Controller
                 'source_reference' => $data['source_reference'],
             ]);
         } catch (\Throwable $e) {
+            // Under concurrency, the unique constraint on posting_sources can be violated.
+            // Convert that race into a deterministic duplicate outcome (not an error).
+            if ($this->isPostingSourceIdempotencyUniqueViolation($e)) {
+                $raceExisting = PostingSource::where('idempotency_key', $data['idempotency_key'])->first();
+                if ($raceExisting) {
+                    $integrationLog->update([
+                        'status' => IntegrationLog::STATUS_DUPLICATE,
+                        'journal_id' => $raceExisting->journal_id,
+                        'message' => null,
+                    ]);
+
+                    return response()->json([
+                        'status' => 'duplicate',
+                        'journal_id' => $raceExisting->journal_id,
+                    ]);
+                }
+            }
+
             [$httpCode, $errorCode] = $this->resolveErrorContract($e);
-            IntegrationLog::create([
-                'event_type' => $event_type,
-                'idempotency_key' => $data['idempotency_key'],
-                'source_system' => $data['source_system'],
-                'source_reference' => $data['source_reference'],
+            $integrationLog->update([
                 'status' => IntegrationLog::STATUS_ERROR,
                 'message' => $e->getMessage(),
+                'journal_id' => null,
             ]);
 
             return response()->json([
@@ -87,17 +114,17 @@ class FinancialEventController extends Controller
         }
 
         $status = $result['status'];
-        IntegrationLog::create([
-            'event_type' => $event_type,
-            'idempotency_key' => $data['idempotency_key'],
-            'source_system' => $data['source_system'],
-            'source_reference' => $data['source_reference'],
-            'status' => $status,
+        $integrationLog->update([
+            'status' => match ($status) {
+                'posted' => IntegrationLog::STATUS_POSTED,
+                'accepted' => IntegrationLog::STATUS_ACCEPTED,
+                default => $status,
+            },
             'journal_id' => $result['journal_id'] ?? null,
             'message' => $result['message'] ?? null,
         ]);
 
-        if ($status === 'posted' && ! empty($result['journal_id'])) {
+        if ($integrationLog->status === IntegrationLog::STATUS_POSTED && ! empty($result['journal_id'])) {
             $journal = Journal::with('lines')->find($result['journal_id']);
             if ($journal) {
                 JournalPosted::dispatch($journal, [
@@ -112,6 +139,18 @@ class FinancialEventController extends Controller
         $code = $status === 'posted' ? 201 : 202;
 
         return response()->json($result, $code);
+    }
+
+    protected function isPostingSourceIdempotencyUniqueViolation(\Throwable $e): bool
+    {
+        if (! ($e instanceof QueryException)) {
+            return false;
+        }
+
+        $msg = strtolower($e->getMessage());
+
+        // MySQL duplicate key error: 1062, and message typically contains the index/column name.
+        return str_contains($msg, 'posting_sources') && str_contains($msg, 'idempotency_key');
     }
 
     /**

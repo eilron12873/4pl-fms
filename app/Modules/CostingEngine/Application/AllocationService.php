@@ -4,7 +4,9 @@ namespace App\Modules\CostingEngine\Application;
 
 use App\Modules\CostingEngine\Infrastructure\Models\CostingAllocationResult;
 use App\Modules\CostingEngine\Infrastructure\Models\CostingAllocationRule;
+use App\Modules\CostingEngine\Infrastructure\Models\CostingAllocationRun;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class AllocationService
 {
@@ -77,6 +79,37 @@ class AllocationService
             'rows_created' => $created,
             'total_allocated' => round($totalAllocated, 2),
         ];
+    }
+
+    /**
+     * Apply allocation rules for the provided run (approval-gated).
+     *
+     * Deletes existing allocation_results for the same run_date to keep reruns deterministic.
+     */
+    public function applyRulesForRun(CostingAllocationRun $run): array
+    {
+        return DB::transaction(function () use ($run) {
+            $lockedRun = CostingAllocationRun::query()->whereKey($run->id)->lockForUpdate()->firstOrFail();
+
+            if (! $lockedRun->isApproved()) {
+                throw new InvalidArgumentException('Only approved allocation runs can be applied.');
+            }
+
+            $date = $lockedRun->run_date->toDateString();
+
+            CostingAllocationResult::where('allocation_date', $date)->delete();
+            $result = $this->applyRulesForDate($date);
+
+            $meta = $lockedRun->metadata ?? [];
+            $lockedRun->update([
+                'metadata' => array_merge($meta, [
+                    'rows_created' => $result['rows_created'],
+                    'total_allocated' => $result['total_allocated'],
+                ]),
+            ]);
+
+            return $result;
+        });
     }
 
     private function poolAmountForRule(CostingAllocationRule $rule): float

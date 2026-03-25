@@ -17,12 +17,28 @@ class ArInvoiceAdjustment extends Model
         'reason',
         'journal_id',
         'adjustment_date',
+        'status',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'adjustment_date' => 'date',
     ];
+
+    public function isPendingApproval(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
+
+    public function isPosted(): bool
+    {
+        return $this->status === 'posted';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
 
     public function invoice(): BelongsTo
     {

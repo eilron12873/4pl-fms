@@ -41,5 +41,30 @@ class Journal extends Model
     {
         return $this->hasOne(ReversalLink::class, 'reversal_journal_id');
     }
+
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
+
+    public function isPosted(): bool
+    {
+        return $this->status === 'posted';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
 }
 

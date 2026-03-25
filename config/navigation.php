@@ -456,31 +456,31 @@ return [
             'children' => [
                 [
                     'label' => 'Journal Approval',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.approval-workflows.journals',
                     'icon' => 'fas fa-book-reader',
                     'nav_key' => 'workflow_journal',
                 ],
                 [
                     'label' => 'Invoice Approval',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.approval-workflows.invoices',
                     'icon' => 'fas fa-file-invoice-dollar',
                     'nav_key' => 'workflow_invoice',
                 ],
                 [
                     'label' => 'Vendor Bill Approval',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.approval-workflows.vendor-bills',
                     'icon' => 'fas fa-file-invoice',
                     'nav_key' => 'workflow_vendor_bill',
                 ],
                 [
                     'label' => 'Allocation Approval',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.approval-workflows.allocations',
                     'icon' => 'fas fa-sliders-h',
                     'nav_key' => 'workflow_allocation',
                 ],
                 [
                     'label' => 'Credit Note Approval',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.approval-workflows.credit-notes',
                     'icon' => 'fas fa-file-invoice',
                     'nav_key' => 'workflow_credit_note',
                 ],

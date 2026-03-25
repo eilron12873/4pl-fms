@@ -81,6 +81,106 @@ class JournalService
     }
 
     /**
+     * Create a draft journal (does not post / does not enforce period open).
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     * @param  array<string, mixed>  $meta
+     */
+    public function createDraft(array $lines, array $meta = []): Journal
+    {
+        if (empty($lines)) {
+            throw new InvalidArgumentException('Journal must contain at least one line.');
+        }
+
+        $this->validateBalanced($lines);
+
+        $journalDate = $meta['journal_date'] ?? now()->toDateString();
+        $periodCode = $meta['period'] ?? $this->resolvePeriodCodeForDate($journalDate);
+
+        return DB::transaction(function () use ($lines, $meta, $journalDate, $periodCode) {
+            $journalNumber = $meta['journal_number'] ?? Str::uuid()->toString();
+
+            $journal = Journal::create([
+                'journal_number' => $journalNumber,
+                'journal_date' => $journalDate,
+                'period' => $periodCode,
+                'description' => $meta['description'] ?? null,
+                'status' => 'draft',
+                'posted_at' => null,
+            ]);
+
+            foreach ($lines as $line) {
+                $this->createJournalLine($journal, $line);
+            }
+
+            return $journal;
+        });
+    }
+
+    /**
+     * Post an already-created draft/pending journal by updating its status to `posted`.
+     * This is where approval gating is enforced.
+     */
+    public function postExistingJournal(Journal $journal, array $meta = []): Journal
+    {
+        if ($journal->isPosted()) {
+            return $journal;
+        }
+
+        if (! $journal->isPendingApproval()) {
+            throw new InvalidArgumentException('Only journals pending approval can be posted.');
+        }
+
+        $lines = $journal->lines()->get();
+        if ($lines->isEmpty()) {
+            throw new InvalidArgumentException('Journal has no lines to post.');
+        }
+
+        // Re-validate balance using persisted line amounts.
+        $this->validateBalanced($lines->map(fn ($l) => ['debit' => (float) $l->debit, 'credit' => (float) $l->credit])->all());
+
+        $journalDate = $journal->journal_date->toDateString();
+        $this->assertPeriodOpenForDate($journalDate);
+
+        return DB::transaction(function () use ($journal, $meta, $journalDate) {
+            $journal->refresh();
+            if ($journal->status !== 'pending_approval') {
+                // Concurrency: status changed after initial check.
+                throw new InvalidArgumentException('Journal is no longer pending approval.');
+            }
+
+            $journal->update([
+                'status' => 'posted',
+                'posted_at' => now(),
+            ]);
+
+            if (isset($meta['source_system'], $meta['source_reference'], $meta['idempotency_key'])) {
+                PostingSource::create([
+                    'journal_id' => $journal->id,
+                    'source_system' => $meta['source_system'],
+                    'source_type' => $meta['source_type'] ?? null,
+                    'source_reference' => $meta['source_reference'],
+                    'event_type' => $meta['event_type'] ?? null,
+                    'idempotency_key' => $meta['idempotency_key'],
+                    'payload' => $meta['payload'] ?? null,
+                ]);
+            }
+
+            $periodCode = $meta['period'] ?? $this->resolvePeriodCodeForDate($journalDate);
+            $journal->update(['period' => $periodCode]);
+
+            $this->audit->logFinancial(
+                "Journal posted: {$journal->journal_number} ({$journal->journal_date})",
+                $journal,
+                ['journal_number' => $journal->journal_number, 'period' => $periodCode],
+                'journal.posted'
+            );
+
+            return $journal->fresh();
+        });
+    }
+
+    /**
      * Create a reversal journal for the given journal. Enforces immutable ledger: corrections via reversal only.
      *
      * @param  array<string, mixed>  $meta

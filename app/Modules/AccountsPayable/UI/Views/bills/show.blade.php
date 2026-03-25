@@ -104,14 +104,14 @@
                 </table>
             </div>
         @endif
-        @if($bill->isIssued() && $bill->balance_due > 0 && auth()->user()?->can('accounts-payable.manage'))
+        @if($bill->isIssued() && ($availableCreditNoteMax ?? 0) > 0 && auth()->user()?->can('accounts-payable.manage'))
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
                 <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Vendor credit note') }}</h3>
                 <form method="POST" action="{{ route('accounts-payable.bills.credit-note', $bill->id) }}" class="flex flex-wrap gap-4 items-end">
                     @csrf
                     <div>
                         <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Amount') }}</label>
-                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" max="{{ $bill->balance_due }}" value="{{ $bill->balance_due }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm w-32">
+                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" max="{{ $availableCreditNoteMax }}" value="{{ $availableCreditNoteMax }}" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm w-32">
                     </div>
                     <div>
                         <label for="reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Reason') }}</label>

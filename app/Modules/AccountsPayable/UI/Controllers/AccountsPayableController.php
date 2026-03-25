@@ -10,17 +10,21 @@ use App\Modules\AccountsPayable\Infrastructure\Models\ApBill;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApCheck;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApPayment;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApVoucher;
+use App\Modules\AccountsPayable\Infrastructure\Models\ApBillAdjustment;
 use App\Modules\AccountsPayable\Infrastructure\Models\Vendor;
+use App\Modules\ApprovalWorkflows\Application\ApprovalWorkflowService;
 use App\Core\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 
 class AccountsPayableController extends Controller
 {
     public function __construct(
         protected BillService $billService,
         protected ApReportingService $reporting,
+        protected ApprovalWorkflowService $approvalWorkflows,
         protected AuditService $audit,
     ) {
     }
@@ -195,6 +199,15 @@ class AccountsPayableController extends Controller
             'purchaseOrder.lines',
         ])->findOrFail($id);
 
+        $pendingCreditSum = ApBillAdjustment::query()
+            ->where('bill_id', $bill->id)
+            ->where('type', 'credit_note')
+            ->where('status', 'pending_approval')
+            ->sum('amount'); // negative values for credit notes
+
+        $pendingCreditAbs = (float) (-$pendingCreditSum);
+        $availableCreditNoteMax = max((float) $bill->balance_due - $pendingCreditAbs, 0.0);
+
         $poVariance = null;
         if ($bill->purchaseOrder) {
             $poTotal = (float) ($bill->purchaseOrder->total ?? 0);
@@ -212,7 +225,7 @@ class AccountsPayableController extends Controller
             ];
         }
 
-        return view('accounts-payable::bills.show', compact('bill', 'poVariance'));
+        return view('accounts-payable::bills.show', compact('bill', 'poVariance', 'availableCreditNoteMax'));
     }
 
     public function issueBill(int $id): RedirectResponse
@@ -309,18 +322,50 @@ class AccountsPayableController extends Controller
     {
         $bill = ApBill::findOrFail($billId);
         $balanceDue = (float) $bill->total - (float) $bill->amount_allocated;
+
+        $pendingCreditSum = ApBillAdjustment::query()
+            ->where('bill_id', $bill->id)
+            ->where('type', 'credit_note')
+            ->where('status', 'pending_approval')
+            ->sum('amount'); // negative values for credit notes
+
+        $pendingCreditAbs = (float) (-$pendingCreditSum);
+        $availableMax = max($balanceDue - $pendingCreditAbs, 0.0);
+
+        if ($availableMax < 0.01) {
+            return redirect()->route('accounts-payable.bills.show', $billId)->with('error', __('Cannot request a credit note: available credit note capacity is zero.'));
+        }
+
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $balanceDue],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $availableMax],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
-        $adjustment = $this->billService->createCreditNote($bill, (float) $data['amount'], $data['reason'] ?? '');
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $adjustment = $this->billService->requestCreditNote(
+            $bill,
+            (float) $data['amount'],
+            $data['reason'] ?? '',
+        );
+
+        $this->approvalWorkflows->requestApproval(
+            approvable: $adjustment,
+            approvalType: 'credit_note',
+            requestedBy: $userId,
+            comments: $data['reason'] ?? null,
+            metadata: ['source' => 'ui.creditNoteStore', 'bill_id' => $bill->id, 'adjustment_id' => $adjustment->id],
+        );
+
         $this->audit->logFinancial(
-            description: 'AP vendor credit note created',
+            description: 'AP vendor credit note requested for approval',
             subject: $adjustment,
             properties: ['bill_id' => $bill->id, 'adjustment_id' => $adjustment->id],
-            event: 'ap.bill.credit_note',
+            event: 'ap.bill.credit_note.requested',
         );
-        return redirect()->route('accounts-payable.bills.show', $billId)->with('success', __('Credit note created.'));
+        return redirect()->route('accounts-payable.bills.show', $billId)->with('success', __('Credit note requested for approval.'));
     }
 
     public function billSubmit(int $id): RedirectResponse
@@ -329,7 +374,22 @@ class AccountsPayableController extends Controller
         if (! $bill->isDraft()) {
             return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only draft bills can be submitted for approval.'));
         }
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
         $bill->update(['status' => 'pending_approval']);
+
+        // Create the shared polymorphic approval record (idempotent).
+        $this->approvalWorkflows->requestApproval(
+            approvable: $bill,
+            approvalType: 'ap_bill',
+            requestedBy: $userId,
+            comments: null,
+            metadata: ['source' => 'ui.billSubmit']
+        );
+
         $this->audit->logFinancial(
             description: 'AP bill submitted for approval',
             subject: $bill,
@@ -345,6 +405,20 @@ class AccountsPayableController extends Controller
         if (! $bill->isPendingApproval()) {
             return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only pending bills can be approved.'));
         }
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $approval = $this->approvalWorkflows->requestApproval(
+            approvable: $bill,
+            approvalType: 'ap_bill',
+            requestedBy: $userId,
+            comments: null,
+            metadata: ['source' => 'ui.billApprove']
+        );
+        $this->approvalWorkflows->approve($approval, $userId, null);
+
         $bill->update(['status' => 'approved']);
         $this->audit->logFinancial(
             description: 'AP bill approved',
@@ -361,6 +435,20 @@ class AccountsPayableController extends Controller
         if (! $bill->isPendingApproval()) {
             return redirect()->route('accounts-payable.bills.show', $id)->with('error', __('Only pending bills can be rejected.'));
         }
+
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $userId = (int) $user->id;
+
+        $approval = $this->approvalWorkflows->requestApproval(
+            approvable: $bill,
+            approvalType: 'ap_bill',
+            requestedBy: $userId,
+            comments: null,
+            metadata: ['source' => 'ui.billReject']
+        );
+        $this->approvalWorkflows->reject($approval, $userId, null);
+
         $bill->update(['status' => 'draft']);
         $this->audit->logFinancial(
             description: 'AP bill rejected back to draft',

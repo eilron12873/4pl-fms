@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Illuminate\Validation\ValidationException;
 
 class LFSAdministrationController extends Controller
 {
@@ -83,19 +84,50 @@ class LFSAdministrationController extends Controller
 
     public function integrationEvents(Request $request): View
     {
-        $query = IntegrationLog::query()->orderByDesc('created_at');
+        $data = $request->validate([
+            'event_type' => ['nullable', 'string', 'max:64'],
+            'status' => ['nullable', 'string', 'in:received,posted,accepted,duplicate,error'],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date'],
+        ]);
 
-        if ($request->filled('event_type')) {
-            $query->where('event_type', $request->string('event_type'));
+        if (
+            ! empty($data['from_date'])
+            && ! empty($data['to_date'])
+            && \Carbon\Carbon::parse($data['from_date'])->gt(\Carbon\Carbon::parse($data['to_date']))
+        ) {
+            throw ValidationException::withMessages([
+                'to_date' => ['The to_date must be greater than or equal to from_date.'],
+            ]);
         }
-        if ($request->filled('status')) {
-            $query->where('status', $request->string('status'));
+
+        $query = IntegrationLog::query()
+            ->select([
+                'id',
+                'created_at',
+                'event_type',
+                'source_system',
+                'source_reference',
+                'status',
+                'message',
+                'journal_id',
+            ])
+            ->orderByDesc('created_at');
+
+        // Deterministic ordering: tie-break on id for stable pagination.
+        $query->orderByDesc('id');
+
+        if (! empty($data['event_type'])) {
+            $query->where('event_type', $data['event_type']);
         }
-        if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->string('from_date'));
+        if (! empty($data['status'])) {
+            $query->where('status', $data['status']);
         }
-        if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->string('to_date'));
+        if (! empty($data['from_date'])) {
+            $query->whereDate('created_at', '>=', $data['from_date']);
+        }
+        if (! empty($data['to_date'])) {
+            $query->whereDate('created_at', '<=', $data['to_date']);
         }
 
         $logs = $query->paginate(50)->withQueryString();
@@ -105,19 +137,49 @@ class LFSAdministrationController extends Controller
 
     public function syncLogs(Request $request): View
     {
-        $query = PostingSource::query()->with('journal')->orderByDesc('created_at');
+        $data = $request->validate([
+            'source_system' => ['nullable', 'string', 'max:255'],
+            'event_type' => ['nullable', 'string', 'max:255'],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date'],
+        ]);
 
-        if ($request->filled('source_system')) {
-            $query->where('source_system', 'like', '%' . $request->string('source_system') . '%');
+        if (
+            ! empty($data['from_date'])
+            && ! empty($data['to_date'])
+            && \Carbon\Carbon::parse($data['from_date'])->gt(\Carbon\Carbon::parse($data['to_date']))
+        ) {
+            throw ValidationException::withMessages([
+                'to_date' => ['The to_date must be greater than or equal to from_date.'],
+            ]);
         }
-        if ($request->filled('event_type')) {
-            $query->where('event_type', $request->string('event_type'));
+
+        $query = PostingSource::query()
+            ->with('journal')
+            ->select([
+                'id',
+                'created_at',
+                'source_system',
+                'source_reference',
+                'event_type',
+                'idempotency_key',
+                'journal_id',
+            ])
+            ->orderByDesc('created_at')
+            // Deterministic ordering: tie-break on id for stable pagination.
+            ->orderByDesc('id');
+
+        if (! empty($data['source_system'])) {
+            $query->where('source_system', 'like', '%' . $data['source_system'] . '%');
         }
-        if ($request->filled('from_date')) {
-            $query->whereDate('created_at', '>=', $request->string('from_date'));
+        if (! empty($data['event_type'])) {
+            $query->where('event_type', $data['event_type']);
         }
-        if ($request->filled('to_date')) {
-            $query->whereDate('created_at', '<=', $request->string('to_date'));
+        if (! empty($data['from_date'])) {
+            $query->whereDate('created_at', '>=', $data['from_date']);
+        }
+        if (! empty($data['to_date'])) {
+            $query->whereDate('created_at', '<=', $data['to_date']);
         }
 
         $sources = $query->paginate(50)->withQueryString();

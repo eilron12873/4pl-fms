@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Modules\CostingEngine\Application\AllocationService;
 use App\Modules\CostingEngine\Application\CostingConfigService;
 use App\Modules\CostingEngine\Application\ProfitabilityService;
+use App\Modules\CostingEngine\Infrastructure\Models\CostingAllocationRun;
 use App\Modules\CostingEngine\Infrastructure\Models\CostingAllocationRule;
 use App\Modules\CostingEngine\Infrastructure\Models\CostingSavedFilter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
+use App\Modules\ApprovalWorkflows\Application\ApprovalWorkflowService;
 
 class CostingEngineController extends Controller
 {
@@ -18,6 +20,7 @@ class CostingEngineController extends Controller
         protected ProfitabilityService $profitability,
         protected CostingConfigService $configService,
         protected AllocationService $allocationService,
+        protected ApprovalWorkflowService $approvalWorkflows,
     ) {
     }
 
@@ -96,12 +99,33 @@ class CostingEngineController extends Controller
         $rules = CostingAllocationRule::query()->orderByDesc('id')->paginate(20);
         $message = null;
         if ($request->filled('run_date')) {
-            $result = $this->allocationService->applyRulesForDate($request->string('run_date')->toString());
-            $message = __('Allocation run complete: :rows rows, :amount :ccy allocated', [
-                'rows' => $result['rows_created'],
-                'amount' => number_format((float) $result['total_allocated'], 2),
-                'ccy' => $this->configService->functionalCurrency(),
+            $runDate = $request->string('run_date')->toString();
+            $userId = (int) $request->user()?->id;
+
+            $existingPending = CostingAllocationRun::query()
+                ->whereDate('run_date', $runDate)
+                ->where('status', 'pending_approval')
+                ->orderByDesc('id')
+                ->first();
+
+            $run = $existingPending ?: CostingAllocationRun::create([
+                'run_date' => $runDate,
+                'requested_by' => $userId,
+                'requested_at' => now(),
+                'status' => 'pending_approval',
+                'comments' => null,
+                'metadata' => ['source' => 'ui.allocation-engine'],
             ]);
+
+            $this->approvalWorkflows->requestApproval(
+                approvable: $run,
+                approvalType: 'allocation',
+                requestedBy: $userId,
+                comments: null,
+                metadata: ['run_date' => $runDate, 'source' => 'ui.allocation-engine']
+            );
+
+            $message = __('Allocation run submitted for approval (run id: :id).', ['id' => $run->id]);
         }
 
         return view('costing-engine::allocation-engine', [
@@ -207,7 +231,7 @@ class CostingEngineController extends Controller
         return back()->with('success', __('Preset saved.'));
     }
 
-    public function exportCsv(Request $request, string $report): Response
+    public function exportCsv(Request $request, string $report): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         [$from, $to] = $this->validatedDates($request);
         $rows = match ($report) {
