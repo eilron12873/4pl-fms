@@ -20,7 +20,7 @@
                         <select id="client_id" name="client_id" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             <option value="">{{ __('Select client') }}</option>
                             @foreach($clients as $c)
-                                <option value="{{ $c->id }}" {{ old('client_id') == $c->id ? 'selected' : '' }}>{{ $c->code }} - {{ $c->name }}</option>
+                                <option value="{{ $c->id }}" {{ old('client_id') == $c->id ? 'selected' : '' }}>{{ $c->code }} - {{ $c->display_name }}</option>
                             @endforeach
                         </select>
                     </div>

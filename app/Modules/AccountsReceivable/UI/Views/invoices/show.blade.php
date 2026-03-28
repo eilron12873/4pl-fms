@@ -9,7 +9,7 @@
         @if(session('success'))<div class="p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm">{{ session('success') }}</div>@endif
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
             <dl class="grid grid-cols-2 gap-4 text-sm">
-                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Client') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $invoice->client->code }} - {{ $invoice->client->name }}</dd></div>
+                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Client') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $invoice->client->code }} — {{ $invoice->client->display_name }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Invoice date') }}</dt><dd class="text-gray-900 dark:text-gray-100">{{ $invoice->invoice_date?->format('Y-m-d') }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Due date') }}</dt><dd class="text-gray-900 dark:text-gray-100">{{ $invoice->due_date?->format('Y-m-d') }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Status') }}</dt><dd><span class="px-2 py-0.5 rounded text-xs {{ $invoice->status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $invoice->status }}</span></dd></div>

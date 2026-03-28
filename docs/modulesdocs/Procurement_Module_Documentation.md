@@ -67,6 +67,19 @@ Via migrations (not listed here in full), the module uses:
 - `purchase_orders`
 - `purchase_order_lines`
 
+### 2.3 Current implementation state (production-ready core)
+
+- **Audit logging**: `ProcurementController` uses `AuditService` with `log_name` = `procurement` (`AuditService::LOG_PROCUREMENT`). Lifecycle events include:
+  - `procurement.pr.created`, `procurement.pr.submitted`, `procurement.pr.approved`
+  - `procurement.po.created`, `procurement.po.issued`, `procurement.po.received`
+  - Properties include `before` / `after` for status (and `received_date` where relevant), plus identifiers such as `pr_number` / `po_number` in the structured payload where applicable.
+- **Audit UI**: LFS Audit Logs category filter includes **Procurement**. `AuditSubjectLinkResolver` maps P.R. and P.O. subjects to their show routes for deep-links from the activity list.
+- **P.O. ↔ P.R. rules**: A linked `purchase_request_id` is accepted only when the P.R. exists and `status = approved`. The P.O. create screen lists **approved** P.R.s only (no draft linkage).
+- **Currency**: P.O. `currency` is validated as a three-letter ISO code using the same Symfony Intl currency list as elsewhere in the app (normalized to uppercase).
+- **P.R. lines on P.O.**: Optional `lines.*.purchase_request_line_id` is validated to belong to the selected P.R. and stored on `purchase_order_lines`. **Create P.O. from P.R.**: approved P.R. detail includes a link to `purchase-orders/create?prefill_pr={id}`, which pre-fills line rows from the P.R. (editable defaults).
+- **Automated tests**: `tests/Feature/Procurement/ProcurementWorkflowTest.php` covers permissions, full P.R./P.O. happy path with audit assertions, illegal transitions, rejected non-approved P.R. link, and a smoke GET for AP bill create with `purchase_order_id`.
+- **Number generation**: `PR-YYYY-#####` / `PO-YYYY-#####` remain last-row based; concurrent creates could theoretically collide (low risk); consider DB uniqueness or locking if volume requires it.
+
 ---
 
 ## 3. Key Components
@@ -187,15 +200,18 @@ Key routes:
       - Auto-generated `pr_number` via `generatePrNumber()`.
       - `status = draft`.
     - Create `PurchaseRequestLine` rows, computing numeric values.
+  - Logs `procurement.pr.created` to the procurement audit log.
   - Redirects to the P.R. show page with a success flash message.
 - `purchaseRequestShow(int $id): View`
   - Loads a P.R. with `lines` and renders details.
 - `purchaseRequestSubmit(int $id): RedirectResponse`
   - Only allows transition from `draft` to `submitted`.
   - Validates state and updates status; redirects with success or error message.
+  - Logs `procurement.pr.submitted` with `before` / `after` status.
 - `purchaseRequestApprove(int $id): RedirectResponse`
   - Only allows transition from `submitted` to `approved`.
   - Sets `approval_date = now()` and updates status.
+  - Logs `procurement.pr.approved` with `before` / `after` status.
 
 #### Purchase Orders
 
@@ -211,15 +227,16 @@ Key routes:
 - `purchaseOrderCreate(Request $request): View`
   - Loads:
     - Active `Vendor` list (from Accounts Payable module).
-    - `PurchaseRequest` options in `draft` or `approved` status.
+    - `PurchaseRequest` options in **`approved`** status only.
+  - Optional query `prefill_pr={id}`: when the P.R. is approved, pre-fills line rows from `PurchaseRequestLine` (quantity, description, estimated cost as default unit price, account code, hidden `purchase_request_line_id`).
   - Renders `purchase-orders.create`, enabling:
     - Standalone P.O. creation.
-    - P.O. referencing a P.R. (without automatic line-copying in v1).
+    - P.O. referencing an approved P.R. with optional traceable line links.
 - `purchaseOrderStore(Request $request): RedirectResponse`
   - Validates:
-    - Vendor, optional `purchase_request_id`.
-    - Dates and currency.
-    - At least one line with quantity, unit price, and optional account code.
+    - Vendor, optional `purchase_request_id` (must reference an **approved** P.R. if set).
+    - Dates and ISO currency code (or blank to default from vendor).
+    - At least one line with quantity, unit price, optional account code, optional `purchase_request_line_id` (must belong to the selected P.R.).
   - In a DB transaction:
     - Creates `PurchaseOrder` with:
       - Auto-generated `po_number` via `generatePoNumber()`.
@@ -227,9 +244,10 @@ Key routes:
       - `currency` defaulting to vendor currency when not specified.
     - For each line:
       - Calculates `amount = quantity * unit_price`.
-      - Creates `PurchaseOrderLine`.
+      - Creates `PurchaseOrderLine` (including `purchase_request_line_id` when provided).
       - Accumulates total.
     - Updates the header `total`.
+  - Logs `procurement.po.created` to the procurement audit log.
   - Redirects to the P.O. show page with success message.
 - `purchaseOrderShow(int $id): View`
   - Loads a P.O. with `vendor`, `lines`, and `purchaseRequest`.
@@ -238,9 +256,11 @@ Key routes:
 - `purchaseOrderIssue(int $id): RedirectResponse`
   - Only allows transition from `draft` to `issued`.
   - Enforces status check; redirects with appropriate message.
+  - Logs `procurement.po.issued`.
 - `purchaseOrderReceive(int $id): RedirectResponse`
   - Only allows transition from `issued` to `received`.
   - Sets `received_date = now()` and updates status.
+  - Logs `procurement.po.received` with `before` / `after` for status and `received_date`.
 
 ---
 
@@ -266,15 +286,17 @@ Key routes:
      - “Submit P.R.” button appears when `status = draft` and user has `procurement.manage`.
    - System:
      - Changes status to `submitted`.
-     - Records audit trail via standard activity logging.
+     - Writes an activity row: event `procurement.pr.submitted`, `log_name` = `procurement`.
 3. **Approve P.R.**
    - On the same detail view:
      - “Approve P.R.” button appears when `status = submitted`.
    - System:
      - Marks status `approved`.
      - Sets `approval_date = now()`.
+     - Writes `procurement.pr.approved` to the procurement audit log.
 4. **Use P.R. in P.O. creation (optional)**
    - When creating a P.O., an approved P.R. can be referenced via `purchase_request_id` for traceability.
+   - From an approved P.R. show page, **Create P.O. from this P.R.** opens P.O. create with lines pre-filled; line rows may carry `purchase_request_line_id` for traceability.
 
 ### 5.2 Purchase Order Workflow (P.O.)
 
@@ -295,12 +317,14 @@ Key routes:
      - Generates `PO-YYYY-#####`.
      - Calculates `amount = quantity * unit_price` per line.
      - Sets header `total` and `status = draft`.
+     - Logs `procurement.po.created`.
 2. **Issue P.O.**
    - On P.O. detail page:
      - “Issue P.O.” button is visible when `status = draft` and user has `procurement.manage`.
    - System:
      - Validates status.
      - Updates status to `issued`.
+     - Logs `procurement.po.issued`.
 3. **Mark P.O. Received**
    - On P.O. detail page:
      - “Mark received” button appears when `status = issued`.
@@ -308,6 +332,7 @@ Key routes:
      - Validates status.
      - Sets `status = received`.
      - Records `received_date = now()`.
+     - Logs `procurement.po.received`.
 4. **Integration with AP – Create Bill from P.O.**
    - When a P.O. is `issued` or `received` and user has `accounts-payable.manage`:
      - A “Create bill from P.O.” link appears (in the P.O. view) pointing to AP:
@@ -382,10 +407,11 @@ Key routes:
 - **Create** – `GET /procurement/purchase-orders/create`
   - Header fields:
     - Vendor (required).
-    - Optional P.R. reference (draft or approved).
+    - Optional P.R. reference (**approved** P.R.s only in the dropdown).
     - Order date, expected date, currency.
   - Lines:
-    - Description, quantity, unit price, account code.
+    - Description, quantity, unit price, account code; optional hidden `purchase_request_line_id` when pre-filled from a P.R.
+  - Query `prefill_pr`: loads line defaults from an approved P.R.
   - Allows creation of both standalone and P.R.-linked P.O.s.
 - **Store** – `POST /procurement/purchase-orders`
   - Validates fields and lines; computes totals as described previously.
@@ -414,7 +440,8 @@ Key routes:
   - P.O. vendor is drawn from the central `Vendor` master in Accounts Payable.
   - Currency defaults from vendor, reducing configuration duplication.
 - **Auditability**:
-  - Status changes and creations go through standard Laravel flows (and can be captured via Activity log configuration).
+  - P.R./P.O. creates and status transitions emit `Activity` rows via `AuditService` with `log_name` = `procurement` and stable `event` prefixes (`procurement.pr.*`, `procurement.po.*`).
+  - Audit Logs UI can filter by category **Procurement** and deep-link to P.R./P.O. detail when the subject is stored on the activity.
   - P.R. and P.O. IDs and numbers provide a clear reference chain into AP and Core Accounting.
 
 ---
@@ -425,11 +452,9 @@ These are future improvements that can strengthen the Procurement module.
 
 ### 8.1 Deeper P.R. ↔ P.O. Integration
 
-- Automatically:
-  - Copy lines from an **approved P.R.** into a new P.O.:
-    - Preserve description, quantity, and account coding.
-    - Allow editing on the P.O. with clear variance tracking.
-  - Show P.R. status impact when P.O. is completed (e.g. mark P.R. as “fulfilled”).
+- **Done (MVP)**: Pre-fill P.O. lines from an approved P.R. (`prefill_pr`), validate and persist `purchase_request_line_id` on P.O. lines, and restrict P.O. linkage to **approved** P.R.s only.
+- **Planned**:
+  - Mark P.R. status when P.O. is completed (e.g. `fulfilled` / closed) and surface P.R. vs P.O. variance in the UI beyond raw line editing.
 
 ### 8.2 3-Way Matching Support
 
@@ -463,17 +488,20 @@ These are future improvements that can strengthen the Procurement module.
 
 ### 8.5 Audit & Governance Integration
 
-- Ensure:
-  - Creation, status changes, and key field edits for P.R. and P.O. are logged as audit events.
-  - Audit Logs can filter by:
-    - `log_name` = `procurement` or `configuration`.
-    - Entity type (P.R. vs P.O.).
-  - Clicking an audit entry can deep-link back to the P.R. or P.O. detail screen.
+- **Done**: Create and lifecycle status changes for P.R. and P.O. are logged with `log_name` = `procurement` and events `procurement.pr.*` / `procurement.po.*`. Audit Logs category **Procurement** filters these rows; `AuditSubjectLinkResolver` deep-links P.R. and P.O. subjects to their show pages.
+- **Planned**: Log granular field edits (beyond status), richer entity-type filters in the UI, and alignment with broader governance / retention policies if required.
 
 ---
 
 ## 9. Summary
 
-The **Procurement** module in LFS provides a clean, modular foundation for handling Purchase Requests and Purchase Orders, with clear status workflows and tight integration into Accounts Payable.  
-As it evolves with deeper 3-way matching, configurable approval rules, richer analytics, and stronger audit integration, it will become the central control point for spend authorization and vendor commitments across the financial platform.
+The **Procurement** module in LFS provides a clean, modular foundation for handling Purchase Requests and Purchase Orders, with clear status workflows, **audited** lifecycle transitions, validated P.R. linkage, optional P.R.-to-P.O. line traceability, and tight integration into Accounts Payable.  
+Further work (3-way matching, configurable approval rules, analytics cards, and P.R. “fulfilled” status) remains tracked in §8.
+
+### Acceptance criteria (implemented)
+
+- P.R./P.O. lifecycle mutations emit auditable activities with consistent `procurement.*` event names and filterable `log_name` = `procurement`.
+- Audit log UI can open linked P.R./P.O. when the activity subject is set.
+- Feature tests cover permissions, happy paths, illegal transitions, invalid P.R. link, and AP bill create smoke with `purchase_order_id`.
+- P.O. cannot reference a P.R. unless that P.R. is **approved**.
 

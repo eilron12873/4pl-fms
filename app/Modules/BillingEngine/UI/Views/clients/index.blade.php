@@ -34,7 +34,7 @@
                             @forelse($clients as $client)
                                 <tr>
                                     <td class="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{{ $client->code }}</td>
-                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100">{{ $client->name }}</td>
+                                    <td class="px-4 py-2 text-gray-900 dark:text-gray-100">{{ $client->display_name }}</td>
                                     <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $client->external_id ?? '—' }}</td>
                                     <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $client->currency }}</td>
                                     <td class="px-4 py-2">

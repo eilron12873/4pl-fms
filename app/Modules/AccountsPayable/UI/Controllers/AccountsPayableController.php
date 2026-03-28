@@ -2,22 +2,23 @@
 
 namespace App\Modules\AccountsPayable\UI\Controllers;
 
+use App\Core\Services\AuditService;
 use App\Http\Controllers\Controller;
-use App\Modules\AccountsPayable\Application\ApReportingService;
 use App\Modules\AccountsPayable\Application\AmountToWords;
+use App\Modules\AccountsPayable\Application\ApReportingService;
 use App\Modules\AccountsPayable\Application\BillService;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApBill;
+use App\Modules\AccountsPayable\Infrastructure\Models\ApBillAdjustment;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApCheck;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApPayment;
 use App\Modules\AccountsPayable\Infrastructure\Models\ApVoucher;
-use App\Modules\AccountsPayable\Infrastructure\Models\ApBillAdjustment;
 use App\Modules\AccountsPayable\Infrastructure\Models\Vendor;
 use App\Modules\ApprovalWorkflows\Application\ApprovalWorkflowService;
-use App\Core\Services\AuditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class AccountsPayableController extends Controller
 {
@@ -26,8 +27,7 @@ class AccountsPayableController extends Controller
         protected ApReportingService $reporting,
         protected ApprovalWorkflowService $approvalWorkflows,
         protected AuditService $audit,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): View
     {
@@ -46,6 +46,7 @@ class AccountsPayableController extends Controller
             $query->where('is_active', $request->boolean('active'));
         }
         $vendors = $query->orderBy('code')->paginate(20);
+
         return view('accounts-payable::vendors.index', compact('vendors'));
     }
 
@@ -54,10 +55,99 @@ class AccountsPayableController extends Controller
         return view('accounts-payable::vendors.create');
     }
 
+    public function vendorShow(Vendor $vendor): View
+    {
+        $vendor->loadCount(['bills', 'payments', 'purchaseOrders']);
+
+        return view('accounts-payable::vendors.show', compact('vendor'));
+    }
+
+    public function vendorEdit(Vendor $vendor): View
+    {
+        return view('accounts-payable::vendors.edit', compact('vendor'));
+    }
+
     public function vendorStore(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:50', 'unique:vendors,code'],
+        $data = $this->validatedVendorPayload($request);
+        $data['payment_terms_days'] = $data['payment_terms_days'] ?? 30;
+        $data['is_active'] = $request->boolean('is_active');
+        $data['currency'] = strtoupper($data['currency']);
+        $vendor = Vendor::create($data);
+        $this->audit->log(
+            description: 'Vendor created in AP',
+            event: 'ap.vendor.created',
+            subject: $vendor,
+            properties: ['vendor_code' => $vendor->code],
+        );
+
+        return redirect()->route('accounts-payable.vendors.show', $vendor)->with('success', __('Vendor created.'));
+    }
+
+    public function vendorUpdate(Request $request, Vendor $vendor): RedirectResponse
+    {
+        $before = [
+            'code' => $vendor->code,
+            'name' => $vendor->name,
+            'is_active' => $vendor->is_active,
+            'currency' => $vendor->currency,
+        ];
+        $data = $this->validatedVendorPayload($request, $vendor);
+        $data['payment_terms_days'] = $data['payment_terms_days'] ?? 30;
+        $data['is_active'] = $request->boolean('is_active');
+        $data['currency'] = strtoupper($data['currency']);
+        $vendor->update($data);
+        $this->audit->log(
+            description: 'Vendor updated in AP',
+            event: 'ap.vendor.updated',
+            subject: $vendor,
+            properties: [
+                'before' => $before,
+                'after' => [
+                    'code' => $vendor->code,
+                    'name' => $vendor->name,
+                    'is_active' => $vendor->is_active,
+                    'currency' => $vendor->currency,
+                ],
+            ],
+        );
+
+        return redirect()->route('accounts-payable.vendors.show', $vendor)->with('success', __('Vendor updated.'));
+    }
+
+    public function vendorDestroy(Vendor $vendor): RedirectResponse
+    {
+        $vendor->loadCount(['bills', 'payments', 'purchaseOrders']);
+        if ($vendor->bills_count > 0 || $vendor->payments_count > 0 || $vendor->purchase_orders_count > 0) {
+            return redirect()
+                ->route('accounts-payable.vendors.show', $vendor)
+                ->with('error', __('This vendor cannot be deleted because it has bills, payments, or purchase orders. Deactivate it instead.'));
+        }
+        $code = $vendor->code;
+        $id = $vendor->id;
+        $vendor->delete();
+        $this->audit->log(
+            description: 'Vendor deleted in AP',
+            event: 'ap.vendor.deleted',
+            subject: null,
+            properties: ['vendor_id' => $id, 'vendor_code' => $code],
+        );
+
+        return redirect()->route('accounts-payable.vendors.index')->with('success', __('Vendor deleted.'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedVendorPayload(Request $request, ?Vendor $exceptForUniqueCode = null): array
+    {
+        $codeRule = Rule::unique('vendors', 'code');
+        if ($exceptForUniqueCode !== null) {
+            $codeRule->ignore($exceptForUniqueCode->id);
+        }
+
+        return $request->validate([
+            'code' => ['required', 'string', 'max:50', $codeRule],
             'name' => ['required', 'string', 'max:255'],
             'currency' => ['required', 'string', 'size:3'],
             'payment_terms_days' => ['nullable', 'integer', 'min:0', 'max:365'],
@@ -69,15 +159,6 @@ class AccountsPayableController extends Controller
             'bank_swift_code' => ['nullable', 'string', 'max:50'],
             'preferred_payment_method' => ['nullable', 'string', 'in:ach,check,other'],
         ]);
-        $data['payment_terms_days'] = $data['payment_terms_days'] ?? 30;
-        $vendor = Vendor::create($data);
-        $this->audit->log(
-            description: 'Vendor created in AP',
-            event: 'ap.vendor.created',
-            subject: $vendor,
-            properties: ['vendor_code' => $vendor->code],
-        );
-        return redirect()->route('accounts-payable.vendors.index')->with('success', __('Vendor created.'));
     }
 
     public function bills(Request $request): View
@@ -91,6 +172,7 @@ class AccountsPayableController extends Controller
         }
         $bills = $query->orderByDesc('bill_date')->paginate(20);
         $vendors = Vendor::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-payable::bills.index', compact('bills', 'vendors'));
     }
 
@@ -110,6 +192,7 @@ class AccountsPayableController extends Controller
                 ])->values()->all();
             }
         }
+
         return view('accounts-payable::bills.create', compact('vendors', 'purchaseOrder', 'presetLines'));
     }
 
@@ -143,6 +226,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_number' => $bill->bill_number],
             event: 'ap.bill.draft_created',
         );
+
         return redirect()->route('accounts-payable.bills.show', $bill->id)->with('success', __('Bill created. You can issue it when ready.'));
     }
 
@@ -154,6 +238,7 @@ class AccountsPayableController extends Controller
         }
         $vendors = Vendor::where('is_active', true)->orderBy('code')->get();
         $lines = $bill->lines->map(fn ($l) => ['description' => $l->description, 'amount' => $l->amount])->values()->all();
+
         return view('accounts-payable::bills.edit', compact('bill', 'vendors', 'lines'));
     }
 
@@ -186,6 +271,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_number' => $bill->bill_number],
             event: 'ap.bill.draft_updated',
         );
+
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill updated.'));
     }
 
@@ -241,6 +327,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_number' => $bill->bill_number],
             event: 'ap.bill.issued',
         );
+
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill issued.'));
     }
 
@@ -260,6 +347,7 @@ class AccountsPayableController extends Controller
         $fromDate = $request->filled('from_date') ? $request->string('from_date')->toString() : null;
         $toDate = $request->filled('to_date') ? $request->string('to_date')->toString() : null;
         $data = $this->reporting->statementOfAccount($vendorId, $fromDate, $toDate);
+
         return view('accounts-payable::statement', array_merge($data, ['vendors' => $vendors]));
     }
 
@@ -267,6 +355,7 @@ class AccountsPayableController extends Controller
     {
         $asOfDate = $request->filled('as_of_date') ? $request->string('as_of_date')->toString() : now()->toDateString();
         $rows = $this->reporting->agingReport($asOfDate);
+
         return view('accounts-payable::aging', compact('rows', 'asOfDate'));
     }
 
@@ -278,6 +367,7 @@ class AccountsPayableController extends Controller
         }
         $payments = $query->orderByDesc('payment_date')->paginate(20);
         $vendors = Vendor::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-payable::payments.index', compact('payments', 'vendors'));
     }
 
@@ -285,6 +375,7 @@ class AccountsPayableController extends Controller
     {
         $vendors = Vendor::where('is_active', true)->orderBy('code')->get();
         $bankAccounts = \App\Modules\Treasury\Infrastructure\Models\BankAccount::where('is_active', true)->orderBy('name')->get();
+
         return view('accounts-payable::payments.create', compact('vendors', 'bankAccounts'));
     }
 
@@ -315,6 +406,7 @@ class AccountsPayableController extends Controller
             properties: ['payment_id' => $payment->id, 'vendor_id' => $payment->vendor_id],
             event: 'ap.payment.recorded',
         );
+
         return redirect()->route('accounts-payable.payments.index')->with('success', __('Payment recorded.'));
     }
 
@@ -337,7 +429,7 @@ class AccountsPayableController extends Controller
         }
 
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $availableMax],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:'.$availableMax],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -365,6 +457,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_id' => $bill->id, 'adjustment_id' => $adjustment->id],
             event: 'ap.bill.credit_note.requested',
         );
+
         return redirect()->route('accounts-payable.bills.show', $billId)->with('success', __('Credit note requested for approval.'));
     }
 
@@ -396,6 +489,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_number' => $bill->bill_number],
             event: 'ap.bill.submitted',
         );
+
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill submitted for approval.'));
     }
 
@@ -426,6 +520,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_number' => $bill->bill_number],
             event: 'ap.bill.approved',
         );
+
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill approved. You can now issue it.'));
     }
 
@@ -456,6 +551,7 @@ class AccountsPayableController extends Controller
             properties: ['bill_number' => $bill->bill_number],
             event: 'ap.bill.rejected',
         );
+
         return redirect()->route('accounts-payable.bills.show', $id)->with('success', __('Bill rejected back to draft.'));
     }
 
@@ -469,12 +565,14 @@ class AccountsPayableController extends Controller
             $query->whereDate('voucher_date', '<=', $request->string('to_date'));
         }
         $vouchers = $query->paginate(20)->withQueryString();
+
         return view('accounts-payable::vouchers.index', compact('vouchers'));
     }
 
     public function voucherShow(int $id): View
     {
         $voucher = ApVoucher::with(['payment.vendor', 'payment.billPayments.bill'])->findOrFail($id);
+
         return view('accounts-payable::vouchers.show', compact('voucher'));
     }
 
@@ -492,6 +590,7 @@ class AccountsPayableController extends Controller
         }
         $checks = $query->paginate(20)->withQueryString();
         $bankAccounts = \App\Modules\Treasury\Infrastructure\Models\BankAccount::where('is_active', true)->orderBy('name')->get();
+
         return view('accounts-payable::checks.index', compact('checks', 'bankAccounts'));
     }
 
@@ -499,6 +598,7 @@ class AccountsPayableController extends Controller
     {
         $check = ApCheck::with(['payment.vendor', 'payment.billPayments.bill', 'bankAccount'])->findOrFail($id);
         $amountInWords = AmountToWords::forCheck((float) ($check->amount ?? 0));
+
         return view('accounts-payable::checks.show', compact('check', 'amountInWords'));
     }
 
@@ -515,6 +615,7 @@ class AccountsPayableController extends Controller
             properties: ['check_id' => $check->id, 'check_number' => $check->check_number],
             event: 'ap.check.voided',
         );
+
         return redirect()->route('accounts-payable.checks.show', $id)->with('success', __('Check voided.'));
     }
 }

@@ -1,13 +1,24 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Modules\AccountsReceivable\UI\Controllers\AccountsReceivableController;
+use App\Modules\AccountsReceivable\UI\Controllers\ArClientsController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'permission:accounts-receivable.view'])
     ->prefix('accounts-receivable')
     ->name('accounts-receivable.')
     ->group(function () {
         Route::get('/', [AccountsReceivableController::class, 'index'])->name('index');
+
+        Route::get('/clients', [ArClientsController::class, 'index'])->name('clients.index');
+        Route::get('/clients/create', [ArClientsController::class, 'create'])->name('clients.create')->middleware('permission:accounts-receivable.manage|accounts-receivable.clients.manage');
+        Route::post('/clients', [ArClientsController::class, 'store'])->name('clients.store')->middleware('permission:accounts-receivable.manage|accounts-receivable.clients.manage');
+        Route::get('/clients/{client}', [ArClientsController::class, 'show'])->name('clients.show')->whereNumber('client');
+        Route::get('/clients/{client}/edit', [ArClientsController::class, 'edit'])->name('clients.edit')->whereNumber('client')->middleware('permission:accounts-receivable.manage|accounts-receivable.clients.manage');
+        Route::put('/clients/{client}', [ArClientsController::class, 'update'])->name('clients.update')->whereNumber('client')->middleware('permission:accounts-receivable.manage|accounts-receivable.clients.manage');
+        Route::post('/clients/{client}/toggle-active', [ArClientsController::class, 'toggleActive'])->name('clients.toggle-active')->whereNumber('client')->middleware('permission:accounts-receivable.manage|accounts-receivable.clients.manage');
+        Route::delete('/clients/{client}', [ArClientsController::class, 'destroy'])->name('clients.destroy')->whereNumber('client')->middleware('permission:accounts-receivable.manage|accounts-receivable.clients.manage');
+
         Route::get('/invoices', [AccountsReceivableController::class, 'invoices'])->name('invoices.index');
         Route::get('/invoices/create', [AccountsReceivableController::class, 'invoiceCreate'])->name('invoices.create')->middleware('permission:accounts-receivable.manage');
         Route::post('/invoices', [AccountsReceivableController::class, 'invoiceStore'])->name('invoices.store')->middleware('permission:accounts-receivable.manage');

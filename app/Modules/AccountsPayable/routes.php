@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Modules\AccountsPayable\UI\Controllers\AccountsPayableController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'permission:accounts-payable.view'])
     ->prefix('accounts-payable')
@@ -12,6 +12,10 @@ Route::middleware(['auth', 'verified', 'permission:accounts-payable.view'])
         Route::get('/vendors', [AccountsPayableController::class, 'vendors'])->name('vendors.index');
         Route::get('/vendors/create', [AccountsPayableController::class, 'vendorCreate'])->name('vendors.create')->middleware('permission:accounts-payable.manage');
         Route::post('/vendors', [AccountsPayableController::class, 'vendorStore'])->name('vendors.store')->middleware('permission:accounts-payable.manage');
+        Route::get('/vendors/{vendor}', [AccountsPayableController::class, 'vendorShow'])->name('vendors.show')->whereNumber('vendor');
+        Route::get('/vendors/{vendor}/edit', [AccountsPayableController::class, 'vendorEdit'])->name('vendors.edit')->whereNumber('vendor')->middleware('permission:accounts-payable.manage');
+        Route::put('/vendors/{vendor}', [AccountsPayableController::class, 'vendorUpdate'])->name('vendors.update')->whereNumber('vendor')->middleware('permission:accounts-payable.manage');
+        Route::delete('/vendors/{vendor}', [AccountsPayableController::class, 'vendorDestroy'])->name('vendors.destroy')->whereNumber('vendor')->middleware('permission:accounts-payable.manage');
 
         Route::get('/bills', [AccountsPayableController::class, 'bills'])->name('bills.index');
         Route::get('/bills/create', [AccountsPayableController::class, 'billCreate'])->name('bills.create')->middleware('permission:accounts-payable.manage');

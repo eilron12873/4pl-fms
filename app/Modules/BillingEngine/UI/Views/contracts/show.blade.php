@@ -16,7 +16,7 @@
         @endif
         <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Client') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $contract->client->code }} — {{ $contract->client->name }}</dd></div>
+                <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Client') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $contract->client->code }} — {{ $contract->client->display_name }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Service type') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $contract->serviceType->name ?? '—' }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Effective') }}</dt><dd class="font-medium text-gray-900 dark:text-gray-100">{{ $contract->effective_from?->format('Y-m-d') }} – {{ $contract->effective_to?->format('Y-m-d') ?? 'Ongoing' }}</dd></div>
                 <div><dt class="text-gray-500 dark:text-gray-400">{{ __('Status') }}</dt><dd><span class="px-2 py-0.5 rounded text-xs {{ $contract->status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $contract->status }}</span></dd></div>

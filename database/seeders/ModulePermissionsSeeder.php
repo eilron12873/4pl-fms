@@ -76,6 +76,7 @@ class ModulePermissionsSeeder extends Seeder
 
         $supervisorManage = [
             'accounts-receivable.manage',
+            'accounts-receivable.clients.manage',
             'accounts-payable.manage',
             'procurement.manage',
             'inventory-valuation.manage',
@@ -109,13 +110,17 @@ class ModulePermissionsSeeder extends Seeder
         $accountant = Role::firstOrCreate(['name' => 'Accountant', 'guard_name' => $guard]);
         $accountant->syncPermissions($this->intersectPermissions($accountantWanted, $allPermissionNames));
 
-        $analystPerms = array_values(array_filter($allPermissionNames, $isViewish));
+        $analystPerms = array_values(array_unique(array_merge(
+            array_values(array_filter($allPermissionNames, $isViewish)),
+            array_intersect(['accounts-receivable.clients.manage'], $allPermissionNames),
+        )));
         $analyst = Role::firstOrCreate(['name' => 'Analyst', 'guard_name' => $guard]);
         $analyst->syncPermissions($this->intersectPermissions($analystPerms, $allPermissionNames));
 
         $staffWanted = [
             'general-ledger.view',
             'accounts-receivable.view',
+            'accounts-receivable.clients.manage',
             'accounts-payable.view',
             'financial-reporting.view',
             'reports.view',

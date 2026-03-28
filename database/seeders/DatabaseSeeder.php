@@ -21,10 +21,12 @@ class DatabaseSeeder extends Seeder
         $this->call(PeriodsSeeder::class);
         $this->call(ServiceTypesSeeder::class);
         $this->call(VendorsSeeder::class);
+        $this->call(ProcurementDemoSeeder::class);
         $this->call(TreasurySeeder::class);
         $this->call(InventorySeeder::class);
         $this->call(FixedAssetsSeeder::class);
         $this->call(CostingEngineDemoSeeder::class);
+        $this->call(BillingClientsSeeder::class);
         $this->call(AccountsReceivableDemoSeeder::class);
         $this->call(AccountsPayableDemoSeeder::class);
 

@@ -18,7 +18,7 @@
                     <select id="client_id" name="client_id" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                         <option value="">{{ __('All') }}</option>
                         @foreach($clients as $c)
-                            <option value="{{ $c->id }}" @selected(request('client_id') == $c->id)>{{ $c->code }} - {{ $c->name }}</option>
+                            <option value="{{ $c->id }}" @selected(request('client_id') == $c->id)>{{ $c->code }} - {{ $c->display_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -51,7 +51,7 @@
                         @forelse($contracts as $c)
                             <tr>
                                 <td class="px-4 py-2 text-gray-900 dark:text-gray-100">{{ $c->name }}</td>
-                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $c->client->code ?? '-' }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $c->client ? $c->client->code.' — '.$c->client->display_name : '—' }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $c->serviceType->name ?? '-' }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $c->effective_from?->format('Y-m-d') }} - {{ $c->effective_to?->format('Y-m-d') ?? '-' }}</td>
                                 <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs {{ $c->status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $c->status }}</span></td>

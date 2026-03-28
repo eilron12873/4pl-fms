@@ -10,6 +10,8 @@ use App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoiceAdjustment;
 use App\Modules\ApprovalWorkflows\Infrastructure\Models\Approval;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
 use App\Modules\CostingEngine\Infrastructure\Models\CostingAllocationRun;
+use App\Modules\Procurement\Infrastructure\Models\PurchaseOrder;
+use App\Modules\Procurement\Infrastructure\Models\PurchaseRequest;
 use Spatie\Permission\Models\Role;
 
 class AuditSubjectLinkResolver
@@ -21,6 +23,8 @@ class AuditSubjectLinkResolver
         }
 
         return match ($subjectType) {
+            PurchaseRequest::class => route('procurement.purchase-requests.show', $subjectId),
+            PurchaseOrder::class => route('procurement.purchase-orders.show', $subjectId),
             User::class => route('lfs-administration.settings.users.edit', $subjectId),
             Journal::class => route('core-accounting.journals.show', $subjectId),
             ApBill::class => route('accounts-payable.bills.show', $subjectId),

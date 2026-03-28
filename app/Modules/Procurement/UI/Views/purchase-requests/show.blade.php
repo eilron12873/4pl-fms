@@ -27,6 +27,8 @@
                         @csrf
                         <button type="submit" class="inline-flex px-4 py-2 rounded-md bg-green-600 text-white text-sm hover:bg-green-700">{{ __('Approve P.R.') }}</button>
                     </form>
+                @elseif($request->status === 'approved')
+                    <a href="{{ route('procurement.purchase-orders.create', ['prefill_pr' => $request->id]) }}" class="inline-flex px-4 py-2 rounded-md bg-gray-700 text-white text-sm hover:bg-gray-800 mt-2 mb-4">{{ __('Create P.O. from this P.R.') }}</a>
                 @endif
             @endif
             <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-2">{{ __('Lines') }}</h4>

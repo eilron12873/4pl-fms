@@ -18,6 +18,8 @@ class AuditService
 
     public const LOG_DEFAULT = 'default';
 
+    public const LOG_PROCUREMENT = 'procurement';
+
     /**
      * Log an audit entry. Use for financial posting, period close, and other governance events.
      */

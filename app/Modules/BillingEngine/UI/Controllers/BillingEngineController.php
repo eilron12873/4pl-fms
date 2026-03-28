@@ -10,15 +10,13 @@ use App\Modules\BillingEngine\Infrastructure\Models\ContractRateDefinition;
 use App\Modules\BillingEngine\Infrastructure\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BillingEngineController extends Controller
 {
     public function __construct(
         protected RatingService $ratingService,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {
@@ -28,6 +26,7 @@ class BillingEngineController extends Controller
     public function clients(): View
     {
         $clients = BillingClient::orderBy('code')->paginate(20);
+
         return view('billing-engine::clients.index', compact('clients'));
     }
 
@@ -38,36 +37,27 @@ class BillingEngineController extends Controller
 
     public function clientStore(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:50', 'unique:billing_clients,code'],
-            'name' => ['required', 'string', 'max:255'],
-            'external_id' => ['nullable', 'string', 'max:255'],
-            'currency' => ['required', 'string', 'size:3'],
-            'is_active' => ['boolean'],
-        ]);
+        $data = BillingClient::prepareValidatedPayload($request);
         $data['is_active'] = $request->boolean('is_active', true);
         BillingClient::create($data);
+
         return redirect()->route('billing-engine.clients.index')->with('success', __('Client created.'));
     }
 
     public function clientEdit(int $client): View
     {
         $client = BillingClient::findOrFail($client);
+
         return view('billing-engine::clients.edit', compact('client'));
     }
 
     public function clientUpdate(Request $request, int $client): RedirectResponse
     {
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:50', Rule::unique('billing_clients', 'code')->ignore($client->id)],
-            'name' => ['required', 'string', 'max:255'],
-            'external_id' => ['nullable', 'string', 'max:255'],
-            'currency' => ['required', 'string', 'size:3'],
-            'is_active' => ['boolean'],
-        ]);
-        $data['is_active'] = $request->boolean('is_active', true);
         $model = BillingClient::findOrFail($client);
+        $data = BillingClient::prepareValidatedPayload($request, $model->id);
+        $data['is_active'] = $request->boolean('is_active', true);
         $model->update($data);
+
         return redirect()->route('billing-engine.clients.index')->with('success', __('Client updated.'));
     }
 
@@ -82,6 +72,7 @@ class BillingEngineController extends Controller
         }
         $contracts = $query->orderByDesc('effective_from')->paginate(15);
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return view('billing-engine::contracts.index', compact('contracts', 'clients'));
     }
 
@@ -89,6 +80,7 @@ class BillingEngineController extends Controller
     {
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
         $serviceTypes = ServiceType::orderBy('code')->get();
+
         return view('billing-engine::contracts.create', compact('clients', 'serviceTypes'));
     }
 
@@ -105,12 +97,14 @@ class BillingEngineController extends Controller
             'sla_terms' => ['nullable', 'string'],
         ]);
         $contract = Contract::create($data);
+
         return redirect()->route('billing-engine.contracts.show', $contract)->with('success', __('Contract created.'));
     }
 
     public function contractShow(int $contract): View
     {
         $contract = Contract::with(['client', 'serviceType', 'rateDefinitions', 'slaPenaltyRules'])->findOrFail($contract);
+
         return view('billing-engine::contracts.show', compact('contract'));
     }
 
@@ -119,6 +113,7 @@ class BillingEngineController extends Controller
         $contract = Contract::with('rateDefinitions')->findOrFail($contract);
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
         $serviceTypes = ServiceType::orderBy('code')->get();
+
         return view('billing-engine::contracts.edit', compact('contract', 'clients', 'serviceTypes'));
     }
 
@@ -136,6 +131,7 @@ class BillingEngineController extends Controller
         ]);
         $model = Contract::findOrFail($contract);
         $model->update($data);
+
         return redirect()->route('billing-engine.contracts.show', $model)->with('success', __('Contract updated.'));
     }
 
@@ -190,6 +186,7 @@ class BillingEngineController extends Controller
         $data['contract_id'] = $contract->id;
         $data['sort_order'] = $contract->rateDefinitions()->max('sort_order') + 1;
         ContractRateDefinition::create($data);
+
         return redirect()->route('billing-engine.contracts.show', $contract)->with('success', __('Rate added.'));
     }
 
@@ -197,6 +194,7 @@ class BillingEngineController extends Controller
     {
         $contract = Contract::findOrFail($contract);
         ContractRateDefinition::where('contract_id', $contract->id)->where('id', $rate)->firstOrFail()->delete();
+
         return redirect()->route('billing-engine.contracts.show', $contract)->with('success', __('Rate removed.'));
     }
 }

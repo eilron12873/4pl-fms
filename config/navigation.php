@@ -78,6 +78,12 @@ return [
                     'nav_key' => 'ar_dashboard',
                 ],
                 [
+                    'label' => 'Clients',
+                    'route' => 'accounts-receivable.clients.index',
+                    'icon' => 'fas fa-building',
+                    'nav_key' => 'ar_clients',
+                ],
+                [
                     'label' => 'Invoices',
                     'route' => 'accounts-receivable.invoices.index',
                     'icon' => 'fas fa-file-invoice',

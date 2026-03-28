@@ -2,6 +2,7 @@
 
 namespace App\Modules\AccountsPayable\Infrastructure\Models;
 
+use App\Modules\Procurement\Infrastructure\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -36,5 +37,10 @@ class Vendor extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(ApPayment::class, 'vendor_id');
+    }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class, 'vendor_id');
     }
 }

@@ -33,6 +33,7 @@
                         <option value="audit" @selected(request('log_name') === 'audit')>{{ __('Audit') }}</option>
                         <option value="security" @selected(request('log_name') === 'security')>{{ __('Security') }}</option>
                         <option value="configuration" @selected(request('log_name') === 'configuration')>{{ __('Configuration') }}</option>
+                        <option value="procurement" @selected(request('log_name') === 'procurement')>{{ __('Procurement') }}</option>
                     </select>
                 </div>
                 <div>

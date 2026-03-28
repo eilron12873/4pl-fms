@@ -13,23 +13,24 @@ class BillingEngineApiController extends Controller
 {
     public function __construct(
         protected RatingService $ratingService,
-    ) {
-    }
+    ) {}
 
     public function clients(): JsonResponse
     {
-        $clients = BillingClient::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name', 'external_id', 'currency']);
+        $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return response()->json(['clients' => $clients]);
     }
 
     public function contracts(Request $request): JsonResponse
     {
-        $query = Contract::with(['client:id,code,name', 'serviceType:id,code,name'])
+        $query = Contract::with(['client', 'serviceType:id,code,name'])
             ->where('status', 'active');
         if ($request->filled('client_id')) {
             $query->where('client_id', $request->integer('client_id'));
         }
         $contracts = $query->orderBy('name')->get();
+
         return response()->json(['contracts' => $contracts]);
     }
 
@@ -46,6 +47,7 @@ class BillingEngineApiController extends Controller
         $payload = array_filter($payload, fn ($v) => $v !== null && $v !== '');
 
         $result = $this->ratingService->simulate($eventType, $payload);
+
         return response()->json([
             'contract' => $result['contract'] ? [
                 'id' => $result['contract']->id,

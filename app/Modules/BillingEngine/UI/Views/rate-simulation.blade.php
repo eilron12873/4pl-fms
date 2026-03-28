@@ -23,7 +23,7 @@
                         <select id="client_id" name="client_id" class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                             <option value="">{{ __('Select client') }}</option>
                             @foreach($clients as $c)
-                                <option value="{{ $c->id }}" {{ ($payload['client_id'] ?? '') == $c->id ? 'selected' : '' }}>{{ $c->code }} - {{ $c->name }}</option>
+                                <option value="{{ $c->id }}" {{ ($payload['client_id'] ?? '') == $c->id ? 'selected' : '' }}>{{ $c->code }} - {{ $c->display_name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -32,7 +32,7 @@
                         <select id="contract_id" name="contract_id" class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                             <option value="">{{ __('Auto from client') }}</option>
                             @foreach($contracts as $c)
-                                <option value="{{ $c->id }}" {{ ($payload['contract_id'] ?? '') == $c->id ? 'selected' : '' }}>{{ $c->name }} ({{ $c->client->code ?? '' }})</option>
+                                <option value="{{ $c->id }}" {{ ($payload['contract_id'] ?? '') == $c->id ? 'selected' : '' }}>{{ $c->name }} @if($c->client)({{ $c->client->code }} — {{ $c->client->display_name }})@endif</option>
                             @endforeach
                         </select>
                     </div>

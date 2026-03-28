@@ -5,14 +5,15 @@ namespace App\Modules\AccountsReceivable\UI\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\AccountsReceivable\Application\ArReportingService;
 use App\Modules\AccountsReceivable\Application\InvoiceService;
-use App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoiceAdjustment;
 use App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoice;
+use App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoiceAdjustment;
 use App\Modules\AccountsReceivable\Infrastructure\Models\ArPayment;
-use App\Modules\BillingEngine\Infrastructure\Models\BillingClient;
 use App\Modules\ApprovalWorkflows\Application\ApprovalWorkflowService;
-use Illuminate\Support\Facades\Auth;
+use App\Modules\BillingEngine\Infrastructure\Models\BillingClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AccountsReceivableController extends Controller
@@ -21,8 +22,7 @@ class AccountsReceivableController extends Controller
         protected InvoiceService $invoiceService,
         protected ArReportingService $reporting,
         protected ApprovalWorkflowService $approvalWorkflows,
-    ) {
-    }
+    ) {}
 
     public function index(): View
     {
@@ -40,22 +40,28 @@ class AccountsReceivableController extends Controller
         }
         $invoices = $query->orderByDesc('invoice_date')->paginate(20);
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-receivable::invoices.index', compact('invoices', 'clients'));
     }
 
     public function invoiceCreate(): View
     {
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-receivable::invoices.create', compact('clients'));
     }
 
     public function invoiceStore(Request $request): RedirectResponse
     {
+        $currencyCodes = BillingClient::intlCurrencyCodes();
+        $request->merge([
+            'currency' => $request->filled('currency') ? strtoupper(trim((string) $request->input('currency'))) : null,
+        ]);
         $data = $request->validate([
             'client_id' => ['required', 'exists:billing_clients,id'],
             'invoice_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:invoice_date'],
-            'currency' => ['nullable', 'string', 'size:3'],
+            'currency' => ['nullable', 'string', 'size:3', Rule::in($currencyCodes)],
             'notes' => ['nullable', 'string', 'max:1000'],
             'lines' => ['required', 'array'],
             'lines.*.description' => ['nullable', 'string', 'max:500'],
@@ -68,6 +74,7 @@ class AccountsReceivableController extends Controller
             return redirect()->back()->withInput($request->input())->withErrors(['lines' => __('At least one line with description and amount is required.')]);
         }
         $invoice = $this->invoiceService->createManualInvoice($data);
+
         return redirect()->route('accounts-receivable.invoices.show', $invoice->id)->with('success', __('Invoice created. You can issue it when ready.'));
     }
 
@@ -78,6 +85,7 @@ class AccountsReceivableController extends Controller
             return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Can only edit draft invoices.'));
         }
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-receivable::invoices.edit', compact('invoice', 'clients'));
     }
 
@@ -87,11 +95,15 @@ class AccountsReceivableController extends Controller
         if (! $invoice->isDraft()) {
             return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __('Can only edit draft invoices.'));
         }
+        $currencyCodes = BillingClient::intlCurrencyCodes();
+        $request->merge([
+            'currency' => $request->filled('currency') ? strtoupper(trim((string) $request->input('currency'))) : null,
+        ]);
         $data = $request->validate([
             'client_id' => ['required', 'exists:billing_clients,id'],
             'invoice_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:invoice_date'],
-            'currency' => ['nullable', 'string', 'size:3'],
+            'currency' => ['nullable', 'string', 'size:3', Rule::in($currencyCodes)],
             'notes' => ['nullable', 'string', 'max:1000'],
             'lines' => ['required', 'array'],
             'lines.*.description' => ['nullable', 'string', 'max:500'],
@@ -104,6 +116,7 @@ class AccountsReceivableController extends Controller
             return redirect()->back()->withInput($request->input())->withErrors(['lines' => __('At least one line with description and amount is required.')]);
         }
         $this->invoiceService->updateDraftInvoice($invoice, $data);
+
         return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice updated.'));
     }
 
@@ -127,6 +140,7 @@ class AccountsReceivableController extends Controller
         $invoice = ArInvoice::findOrFail($id);
         try {
             $this->invoiceService->issueInvoice($invoice);
+
             return redirect()->route('accounts-receivable.invoices.show', $id)->with('success', __('Invoice issued.'));
         } catch (\InvalidArgumentException $e) {
             return redirect()->route('accounts-receivable.invoices.show', $id)->with('error', __($e->getMessage()));
@@ -226,6 +240,7 @@ class AccountsReceivableController extends Controller
         $fromDate = $request->filled('from_date') ? $request->string('from_date')->toString() : null;
         $toDate = $request->filled('to_date') ? $request->string('to_date')->toString() : null;
         $data = $this->reporting->statementOfAccount($clientId, $fromDate, $toDate);
+
         return view('accounts-receivable::statement', array_merge($data, ['clients' => $clients]));
     }
 
@@ -233,6 +248,7 @@ class AccountsReceivableController extends Controller
     {
         $asOfDate = $request->filled('as_of_date') ? $request->string('as_of_date')->toString() : now()->toDateString();
         $rows = $this->reporting->agingReport($asOfDate);
+
         return view('accounts-receivable::aging', compact('rows', 'asOfDate'));
     }
 
@@ -244,22 +260,28 @@ class AccountsReceivableController extends Controller
         }
         $payments = $query->orderByDesc('payment_date')->paginate(20);
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-receivable::payments.index', compact('payments', 'clients'));
     }
 
     public function paymentCreate(): View
     {
         $clients = BillingClient::where('is_active', true)->orderBy('code')->get();
+
         return view('accounts-receivable::payments.create', compact('clients'));
     }
 
     public function paymentStore(Request $request): RedirectResponse
     {
+        $currencyCodes = BillingClient::intlCurrencyCodes();
+        $request->merge([
+            'currency' => strtoupper(trim((string) $request->input('currency', ''))),
+        ]);
         $data = $request->validate([
             'client_id' => ['required', 'exists:billing_clients,id'],
             'payment_date' => ['required', 'date'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => ['required', 'string', 'size:3', Rule::in($currencyCodes)],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'allocations' => ['nullable', 'array'],
@@ -268,6 +290,7 @@ class AccountsReceivableController extends Controller
         ]);
         $data['allocations'] = $data['allocations'] ?? [];
         $this->invoiceService->recordPayment($data);
+
         return redirect()->route('accounts-receivable.payments.index')->with('success', __('Payment recorded.'));
     }
 
@@ -289,7 +312,7 @@ class AccountsReceivableController extends Controller
         }
 
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01', 'max:' . $availableMax],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:'.$availableMax],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 

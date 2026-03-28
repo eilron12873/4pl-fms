@@ -16,7 +16,7 @@
                     <select id="client_id" name="client_id" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                         <option value="">{{ __('All') }}</option>
                         @foreach($clients as $c)
-                            <option value="{{ $c->id }}" @selected(request('client_id') == $c->id)>{{ $c->code }} - {{ $c->name }}</option>
+                            <option value="{{ $c->id }}" @selected(request('client_id') == $c->id)>{{ $c->code }} - {{ $c->display_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -52,7 +52,7 @@
                         @forelse($invoices as $inv)
                             <tr>
                                 <td class="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{{ $inv->invoice_number }}</td>
-                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $inv->client->code ?? '-' }}</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $inv->client ? $inv->client->code.' — '.$inv->client->display_name : '—' }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $inv->invoice_date?->format('Y-m-d') }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $inv->due_date?->format('Y-m-d') }}</td>
                                 <td class="px-4 py-2 text-right text-gray-900 dark:text-gray-100">{{ number_format($inv->total, 2) }} {{ $inv->currency }}</td>

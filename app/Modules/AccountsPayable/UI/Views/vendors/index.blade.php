@@ -9,6 +9,7 @@
     </x-slot>
     <div class="py-4 max-w-7xl mx-auto sm:px-6 lg:px-8">
         @if(session('success'))<div class="mb-4 p-3 rounded-md bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-sm">{{ session('success') }}</div>@endif
+        @if(session('error'))<div class="mb-4 p-3 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-sm">{{ session('error') }}</div>@endif
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-4 overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -21,11 +22,12 @@
                             <th class="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{{ __('Terms (days)') }}</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Preferred payment') }}</th>
                             <th class="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">{{ __('Status') }}</th>
+                            <th class="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($vendors as $v)
-                            <tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                 <td class="px-4 py-2 font-mono text-gray-900 dark:text-gray-100">{{ $v->code }}</td>
                                 <td class="px-4 py-2 text-gray-900 dark:text-gray-100">{{ $v->name }}</td>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ $v->category ?? '—' }}</td>
@@ -43,9 +45,16 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2"><span class="px-2 py-0.5 rounded text-xs {{ $v->is_active ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }}">{{ $v->is_active ? __('Active') : __('Inactive') }}</span></td>
+                                <td class="px-4 py-2 text-right whitespace-nowrap">
+                                    <a href="{{ route('accounts-payable.vendors.show', $v) }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ __('View') }}</a>
+                                    @can('accounts-payable.manage')
+                                        <span class="text-gray-300 dark:text-gray-600 mx-1">|</span>
+                                        <a href="{{ route('accounts-payable.vendors.edit', $v) }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ __('Edit') }}</a>
+                                    @endcan
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">{{ __('No vendors yet.') }}</td></tr>
+                            <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">{{ __('No vendors yet.') }}</td></tr>
                         @endforelse
                     </tbody>
                 </table>

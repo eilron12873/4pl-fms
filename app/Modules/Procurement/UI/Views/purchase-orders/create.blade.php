@@ -15,18 +15,21 @@
                         <select id="vendor_id" name="vendor_id" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             <option value="">{{ __('Select vendor') }}</option>
                             @foreach($vendors as $v)
-                                <option value="{{ $v->id }}" {{ old('vendor_id') == $v->id ? 'selected' : '' }}>{{ $v->code }} - {{ $v->name }}</option>
+                                <option value="{{ $v->id }}" {{ (string) old('vendor_id') === (string) $v->id ? 'selected' : '' }}>{{ $v->code }} - {{ $v->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label for="purchase_request_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('From P.R. (optional)') }}</label>
+                        <label for="purchase_request_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('From P.R. (optional, approved only)') }}</label>
                         <select id="purchase_request_id" name="purchase_request_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             <option value="">{{ __('None') }}</option>
                             @foreach($purchaseRequests ?? [] as $pr)
-                                <option value="{{ $pr->id }}" {{ old('purchase_request_id') == $pr->id ? 'selected' : '' }}>{{ $pr->pr_number }}</option>
+                                <option value="{{ $pr->id }}" {{ (string) old('purchase_request_id', $prefillPrId ?? '') === (string) $pr->id ? 'selected' : '' }}>{{ $pr->pr_number }}</option>
                             @endforeach
                         </select>
+                        @if(!empty($importLines))
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Lines were prefilled from the P.R.; adjust unit prices before saving.') }}</p>
+                        @endif
                     </div>
                     <div>
                         <label for="order_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Order date') }} *</label>
@@ -38,15 +41,26 @@
                     </div>
                     <div>
                         <label for="currency" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Currency') }}</label>
-                        <input type="text" id="currency" name="currency" value="{{ old('currency', 'USD') }}" maxlength="3" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                        <input type="text" id="currency" name="currency" value="{{ old('currency', 'USD') }}" maxlength="3" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 uppercase">
                     </div>
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Lines') }} *</label>
                     <div class="space-y-2">
-                        @php $oldLines = old('lines', [['description' => '', 'quantity' => 1, 'unit_price' => 0, 'account_code' => '']]); @endphp
+                        @php
+                            $oldLines = old('lines');
+                            if ($oldLines === null && ! empty($importLines ?? [])) {
+                                $oldLines = $importLines;
+                            }
+                            if ($oldLines === null) {
+                                $oldLines = [['description' => '', 'quantity' => 1, 'unit_price' => 0, 'account_code' => '', 'purchase_request_line_id' => '']];
+                            }
+                        @endphp
                         @foreach($oldLines as $i => $line)
                         <div class="flex gap-2 items-end flex-wrap">
+                            @if(!empty($line['purchase_request_line_id']))
+                                <input type="hidden" name="lines[{{ $i }}][purchase_request_line_id]" value="{{ $line['purchase_request_line_id'] }}">
+                            @endif
                             <input type="text" name="lines[{{ $i }}][description]" value="{{ $line['description'] ?? '' }}" placeholder="{{ __('Description') }}" class="flex-1 min-w-[200px] rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm" required>
                             <input type="number" name="lines[{{ $i }}][quantity]" value="{{ $line['quantity'] ?? 1 }}" step="0.0001" min="0.0001" class="w-24 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm" required>
                             <input type="number" name="lines[{{ $i }}][unit_price]" value="{{ $line['unit_price'] ?? 0 }}" step="0.01" min="0" class="w-28 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm" required>

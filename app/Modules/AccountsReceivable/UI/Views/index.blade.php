@@ -5,7 +5,16 @@
         </h2>
     </x-slot>
     <div class="py-4 max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <a href="{{ route('accounts-receivable.clients.index') }}" class="block p-6 bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                <div class="flex items-center">
+                    <i class="fas fa-building text-2xl text-slate-600 dark:text-slate-400 mr-4"></i>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Clients') }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Customer master data') }}</p>
+                    </div>
+                </div>
+            </a>
             <a href="{{ route('accounts-receivable.invoices.index') }}" class="block p-6 bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <div class="flex items-center">
                     <i class="fas fa-file-invoice text-2xl text-blue-600 dark:text-blue-400 mr-4"></i>

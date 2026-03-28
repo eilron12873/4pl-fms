@@ -20,7 +20,7 @@
                         <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Client') }} *</label>
                         <select id="client_id" name="client_id" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
                             @foreach($clients as $c)
-                                <option value="{{ $c->id }}" {{ old('client_id', $invoice->client_id) == $c->id ? 'selected' : '' }}>{{ $c->code }} - {{ $c->name }}</option>
+                                <option value="{{ $c->id }}" {{ old('client_id', $invoice->client_id) == $c->id ? 'selected' : '' }}>{{ $c->code }} - {{ $c->display_name }}</option>
                             @endforeach
                         </select>
                     </div>

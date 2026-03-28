@@ -12,7 +12,7 @@
                     <label for="client_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Client') }} *</label>
                     <select id="client_id" name="client_id" required class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm">
                         @foreach($clients as $c)
-                            <option value="{{ $c->id }}" @selected(($client->id ?? null) == $c->id)>{{ $c->code }} - {{ $c->name }}</option>
+                            <option value="{{ $c->id }}" @selected(($client->id ?? null) == $c->id)>{{ $c->code }} - {{ $c->display_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -29,7 +29,7 @@
         </div>
         @if(isset($client))
             <div class="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6">
-                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ $client->name }} ({{ $client->code }})</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ $client->display_name }} ({{ $client->code }})</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Outstanding balance') }}: <strong>{{ number_format($balance ?? 0, 2) }} {{ $client->currency }}</strong></p>
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-4">{{ __('Invoices') }}</h4>
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm mt-2">
