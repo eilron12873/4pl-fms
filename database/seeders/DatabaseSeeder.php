@@ -14,6 +14,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(ModulePermissionsSeeder::class);
+        $this->call(RoleDemoUsersSeeder::class);
+        $this->call(CompanySettingsSeeder::class);
         $this->call(ChartOfAccountsSeeder::class);
         $this->call(PostingRulesSeeder::class);
         $this->call(PeriodsSeeder::class);
@@ -41,4 +43,3 @@ class DatabaseSeeder extends Seeder
         }
     }
 }
-

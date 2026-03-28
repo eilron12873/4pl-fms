@@ -9,7 +9,13 @@ use Illuminate\Support\Facades\Auth;
 class AuditService
 {
     public const LOG_FINANCIAL = 'financial';
+
     public const LOG_AUDIT = 'audit';
+
+    public const LOG_SECURITY = 'security';
+
+    public const LOG_CONFIGURATION = 'configuration';
+
     public const LOG_DEFAULT = 'default';
 
     /**

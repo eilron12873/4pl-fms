@@ -10,12 +10,19 @@
             @csrf
             @method('PUT')
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ __('Select permissions to assign to this role.') }}</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-96 overflow-y-auto">
-                @foreach($permissions as $p)
-                    <label class="flex items-center gap-2 text-sm">
-                        <input type="checkbox" name="permissions[]" value="{{ $p->id }}" {{ in_array($p->id, $rolePermissionIds) ? 'checked' : '' }} class="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700">
-                        <span class="text-gray-900 dark:text-gray-100">{{ $p->name }}</span>
-                    </label>
+            <div class="space-y-6 max-h-[32rem] overflow-y-auto pr-1">
+                @foreach($permissionsByGroup as $groupLabel => $groupPermissions)
+                    <div>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">{{ $groupLabel }}</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach($groupPermissions as $p)
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" name="permissions[]" value="{{ $p->id }}" {{ in_array($p->id, $rolePermissionIds) ? 'checked' : '' }} class="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+                                    <span class="text-gray-900 dark:text-gray-100">{{ $p->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
                 @endforeach
             </div>
             <div class="mt-6 flex gap-2">

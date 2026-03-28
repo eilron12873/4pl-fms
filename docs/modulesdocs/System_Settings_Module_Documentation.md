@@ -12,18 +12,15 @@ Conceptually, it lives under **LFS Administration → System Settings** and cove
 - **Financial Controls** – period lock rules, posting policies, approval thresholds, risk flags.
 - **Tax Configuration** – VAT/GST rates, withholding rules, and mapping to GL accounts.
 
-In the current codebase, System Settings is primarily a **navigation and design concept**:
-
-- The navigation blueprint and configuration define how System Settings appears in the UI.
-- Actual, fully-featured settings screens and persistent settings storage are **not yet implemented**.
+In the current codebase, **Company Settings**, **Financial Controls**, and **Tax Configuration** are **implemented** under LFS Administration: they persist to dedicated tables, use `SystemSettingsService` caching where applicable, and emit configuration audit events. This document still describes the **full product vision** for System Settings (including items not yet built, such as default decimal precision / document numbering on the company profile).
 
 This document explains:
 
 - How the System Settings module is structured conceptually and wired into the UI.
-- The intended tech stack & architecture once fully implemented.
+- The tech stack & architecture used for the implemented screens and the intended patterns for the remainder.
 - The target features and workflows.
-- How each System Settings navigation menu is meant to operate.
-- Recommended enhancements to evolve it from concept to a robust, production-ready module.
+- How each System Settings navigation menu operates today vs planned extensions.
+- Recommended enhancements to evolve remaining concepts into production features.
 
 ---
 
@@ -48,20 +45,21 @@ This document explains:
     - **Company Settings** – `nav_key: settings_company`
     - **Financial Controls** – `nav_key: settings_financial_controls`
     - **Tax Configuration** – `nav_key: settings_tax`
-  - Today, all three children route to `lfs-administration.index` as **placeholders**.
+  - **Company Settings** → `lfs-administration.settings.company`; **Financial Controls** → `lfs-administration.settings.financial-controls`; **Tax Configuration** → `lfs-administration.settings.tax`.
 
-### 2.2 Intended Settings Storage Model (Conceptual)
+### 2.2 Settings storage model (implemented + extensions)
 
-Although not yet implemented, the intended model for System Settings should:
+**Implemented today:**
 
-- Use a **single source of truth** for configurable platform options, such as:
-  - `company_name`, `registration_number`, `base_currency`, `fiscal_year_start`, `timezone`.
-  - `period_lock_policy`, `max_backdating_days`, `approval_thresholds`.
-  - `vat_rates`, `withholding_tax_rates`, `tax_account_mappings`.
-- Be stored in the database (e.g. `system_settings` or multiple settings tables) with:
-  - Key-value or JSON-based structure.
-  - Per-tenant isolation (one LFS instance per customer, consistent with the overall deployment model).
-  - Caching to reduce lookup overhead (e.g. via Laravel cache).
+- **Company / general:** typed columns on `general_settings`, accessed via `SystemSettingsService::general()` and cached under `system_settings.general`.
+- **Financial controls:** `financial_control_settings` (e.g. `max_backdating_days`, `allow_manual_journals`), cached under `system_settings.financial`.
+- **Tax:** `tax_codes` and related rate / GL mapping tables, with cached reads where the service exposes them.
+
+**Still conceptual / future** (not a single KV store yet):
+
+- Arbitrary key-value `system_settings` for ad-hoc flags.
+- Per-tenant row isolation beyond the current “one instance, one settings row” deployment model.
+- Additional columns such as default decimal precision or global document numbering unless added in a dedicated story.
 
 ### 2.3 Integration With Other Modules (Conceptual)
 

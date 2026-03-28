@@ -4,7 +4,6 @@ namespace App\Modules\CoreAccounting\Application;
 
 use App\Core\Services\AuditService;
 use App\Modules\CoreAccounting\Domain\Exceptions\JournalNotBalancedException;
-use App\Modules\CoreAccounting\Domain\Exceptions\JournalImmutableException;
 use App\Modules\CoreAccounting\Domain\Exceptions\PeriodLockedException;
 use App\Modules\CoreAccounting\Infrastructure\Models\Account;
 use App\Modules\CoreAccounting\Infrastructure\Models\Journal;
@@ -19,7 +18,8 @@ use InvalidArgumentException;
 class JournalService
 {
     public function __construct(
-        protected AuditService $audit
+        protected AuditService $audit,
+        protected FinancialControlsGate $financialControls,
     ) {}
 
     /**
@@ -38,6 +38,7 @@ class JournalService
         $this->validateBalanced($lines);
 
         $journalDate = $meta['journal_date'] ?? now()->toDateString();
+        $this->financialControls->assertPostingAllowed($journalDate, $meta);
         $this->assertPeriodOpenForDate($journalDate);
 
         return DB::transaction(function () use ($lines, $meta, $journalDate) {
@@ -140,6 +141,7 @@ class JournalService
         $this->validateBalanced($lines->map(fn ($l) => ['debit' => (float) $l->debit, 'credit' => (float) $l->credit])->all());
 
         $journalDate = $journal->journal_date->toDateString();
+        $this->financialControls->assertPostingAllowed($journalDate, $meta);
         $this->assertPeriodOpenForDate($journalDate);
 
         return DB::transaction(function () use ($journal, $meta, $journalDate) {
@@ -219,8 +221,9 @@ class JournalService
 
         $reversalMeta = array_merge($meta, [
             'journal_date' => $reversalDate,
-            'description' => ($meta['description'] ?? 'Reversal') . ' of ' . $journal->journal_number,
+            'description' => ($meta['description'] ?? 'Reversal').' of '.$journal->journal_number,
             'period' => $meta['period'] ?? $this->resolvePeriodCodeForDate($reversalDate),
+            'journal_origin' => 'reversal',
         ]);
 
         $reversalJournal = $this->post($reversalLines, $reversalMeta);
@@ -351,4 +354,3 @@ class JournalService
         return 'asset';
     }
 }
-

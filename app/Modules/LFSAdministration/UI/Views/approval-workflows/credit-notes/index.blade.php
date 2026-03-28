@@ -29,9 +29,9 @@
                             @php
                                 $adjustment = $approval->approvable;
                                 $reference = '';
-                                if ($adjustment instanceof \\App\\Modules\\AccountsReceivable\\Infrastructure\\Models\\ArInvoiceAdjustment) {
+                                if ($adjustment instanceof \App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoiceAdjustment) {
                                     $reference = ($adjustment->invoice?->invoice_number ?? '') . ' (AR)';
-                                } elseif ($adjustment instanceof \\App\\Modules\\AccountsPayable\\Infrastructure\\Models\\ApBillAdjustment) {
+                                } elseif ($adjustment instanceof \App\Modules\AccountsPayable\Infrastructure\Models\ApBillAdjustment) {
                                     $reference = ($adjustment->bill?->bill_number ?? '') . ' (AP)';
                                 }
                             @endphp

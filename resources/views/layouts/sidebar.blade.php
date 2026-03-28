@@ -1,9 +1,9 @@
 @php
     use App\Core\ModuleManager;
     use App\Core\Services\NavigationService;
-    use App\Models\GeneralSetting;
+    use App\Core\Services\SystemSettingsService;
 
-    $settings = GeneralSetting::getSettings();
+    $settings = app(SystemSettingsService::class)->general();
     /** @var ModuleManager $moduleManager */
     $moduleManager = app(ModuleManager::class);
     $enabledModules = collect($moduleManager->getEnabledModules())

@@ -1,8 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Modules\LFSAdministration\UI\Controllers\LFSAdministrationController;
 use App\Modules\LFSAdministration\UI\Controllers\ApprovalWorkflowsController;
+use App\Modules\LFSAdministration\UI\Controllers\LFSAdministrationController;
+use App\Modules\LFSAdministration\UI\Controllers\SystemSettingsController;
+use App\Modules\LFSAdministration\UI\Controllers\UsersManagementController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'permission:lfs-administration.view'])
     ->prefix('lfs-administration')
@@ -10,8 +12,36 @@ Route::middleware(['auth', 'verified', 'permission:lfs-administration.view'])
     ->group(function () {
         Route::get('/', [LFSAdministrationController::class, 'index'])->name('index');
         Route::get('/audit-logs', [LFSAdministrationController::class, 'auditLogs'])->name('audit-logs');
+        Route::get('/audit-logs/export', [LFSAdministrationController::class, 'auditLogsExport'])->name('audit-logs.export');
+        Route::get('/audit-logs/{activity}', [LFSAdministrationController::class, 'auditLogShow'])->name('audit-logs.show')->whereNumber('activity');
         Route::get('/integration-events', [LFSAdministrationController::class, 'integrationEvents'])->name('integration-events');
         Route::get('/sync-logs', [LFSAdministrationController::class, 'syncLogs'])->name('sync-logs');
+
+        Route::middleware('permission:lfs-administration.users.view')->group(function () {
+            Route::get('/settings/users', [UsersManagementController::class, 'index'])->name('settings.users');
+            Route::get('/settings/users/create', [UsersManagementController::class, 'create'])->name('settings.users.create');
+            Route::get('/settings/users/{user}/edit', [UsersManagementController::class, 'edit'])->name('settings.users.edit');
+        });
+
+        Route::middleware('permission:lfs-administration.users.manage')->group(function () {
+            Route::post('/settings/users', [UsersManagementController::class, 'store'])->name('settings.users.store');
+            Route::put('/settings/users/{user}', [UsersManagementController::class, 'update'])->name('settings.users.update');
+            Route::delete('/settings/users/{user}', [UsersManagementController::class, 'destroy'])->name('settings.users.destroy');
+            Route::post('/settings/users/{user}/toggle-active', [UsersManagementController::class, 'toggleActive'])->name('settings.users.toggle-active');
+        });
+
+        Route::get('/settings/company', [SystemSettingsController::class, 'company'])->name('settings.company');
+        Route::put('/settings/company', [SystemSettingsController::class, 'companyUpdate'])->name('settings.company.update')->middleware('permission:lfs-administration.manage');
+
+        Route::get('/settings/financial-controls', [SystemSettingsController::class, 'financialControls'])->name('settings.financial-controls');
+        Route::put('/settings/financial-controls', [SystemSettingsController::class, 'financialControlsUpdate'])->name('settings.financial-controls.update')->middleware('permission:lfs-administration.manage');
+
+        Route::get('/settings/tax', [SystemSettingsController::class, 'taxIndex'])->name('settings.tax');
+        Route::get('/settings/tax/codes/create', [SystemSettingsController::class, 'taxCodeCreate'])->name('settings.tax.codes.create')->middleware('permission:lfs-administration.manage');
+        Route::post('/settings/tax/codes', [SystemSettingsController::class, 'taxCodeStore'])->name('settings.tax.codes.store')->middleware('permission:lfs-administration.manage');
+        Route::get('/settings/tax/codes/{taxCode}/edit', [SystemSettingsController::class, 'taxCodeEdit'])->name('settings.tax.codes.edit')->middleware('permission:lfs-administration.manage');
+        Route::put('/settings/tax/codes/{taxCode}', [SystemSettingsController::class, 'taxCodeUpdate'])->name('settings.tax.codes.update')->middleware('permission:lfs-administration.manage');
+        Route::post('/settings/tax/codes/{taxCode}/rates', [SystemSettingsController::class, 'taxRateStore'])->name('settings.tax.rates.store')->middleware('permission:lfs-administration.manage');
 
         // Approval workflows queues
         Route::get('/approval-workflows', [ApprovalWorkflowsController::class, 'index'])
@@ -90,4 +120,3 @@ Route::middleware(['auth', 'verified', 'permission:lfs-administration.view'])
         Route::get('/roles/{id}/edit', [LFSAdministrationController::class, 'roleEdit'])->name('roles.edit')->whereNumber('id');
         Route::put('/roles/{id}', [LFSAdministrationController::class, 'roleUpdate'])->name('roles.update')->whereNumber('id')->middleware('permission:lfs-administration.manage');
     });
-

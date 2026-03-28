@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Modules\LFSAdministration\UI\Controllers\LFSAdministrationApiController;
 use App\Modules\LFSAdministration\UI\Controllers\ApprovalWorkflowsApiController;
+use App\Modules\LFSAdministration\UI\Controllers\LFSAdministrationApiController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum'])
     ->prefix('lfs-administration')
@@ -30,5 +30,18 @@ Route::middleware(['auth:sanctum'])
         Route::get('/sync-logs', [LFSAdministrationApiController::class, 'syncLogs'])
             ->name('sync-logs')
             ->middleware('permission:lfs-administration.view');
-    });
 
+        Route::get('/audit-logs', [LFSAdministrationApiController::class, 'auditLogs'])
+            ->name('audit-logs')
+            ->middleware('permission:lfs-administration.view');
+
+        Route::get('/settings/company', [LFSAdministrationApiController::class, 'settingsCompany'])
+            ->name('settings.company')
+            ->middleware('permission:lfs-administration.view');
+        Route::get('/settings/financial-controls', [LFSAdministrationApiController::class, 'settingsFinancialControls'])
+            ->name('settings.financial-controls')
+            ->middleware('permission:lfs-administration.view');
+        Route::get('/settings/tax', [LFSAdministrationApiController::class, 'settingsTax'])
+            ->name('settings.tax')
+            ->middleware('permission:lfs-administration.view');
+    });

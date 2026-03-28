@@ -6,7 +6,9 @@
     "description": "LFS Administration module for configuration and finance-focused administration",
     "permissions": [
         "lfs-administration.view",
-        "lfs-administration.manage"
+        "lfs-administration.manage",
+        "lfs-administration.users.view",
+        "lfs-administration.users.manage"
     ],
     "nav": {
         "label": "LFS Administration",

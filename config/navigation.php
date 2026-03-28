@@ -514,19 +514,26 @@ return [
             'children' => [
                 [
                     'label' => 'Company Settings',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.settings.company',
                     'icon' => 'fas fa-building',
                     'nav_key' => 'settings_company',
                 ],
                 [
+                    'label' => 'Users & Roles',
+                    'route' => 'lfs-administration.settings.users',
+                    'icon' => 'fas fa-user-friends',
+                    'nav_key' => 'settings_users',
+                    'permission' => 'lfs-administration.users.view',
+                ],
+                [
                     'label' => 'Financial Controls',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.settings.financial-controls',
                     'icon' => 'fas fa-lock',
                     'nav_key' => 'settings_financial_controls',
                 ],
                 [
                     'label' => 'Tax Configuration',
-                    'route' => 'lfs-administration.index',
+                    'route' => 'lfs-administration.settings.tax',
                     'icon' => 'fas fa-percentage',
                     'nav_key' => 'settings_tax',
                 ],
@@ -534,4 +541,3 @@ return [
         ],
     ],
 ];
-

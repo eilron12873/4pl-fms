@@ -16,6 +16,9 @@ class GeneralSetting extends Model
         'default_timezone',
         'default_date_format',
         'default_currency',
+        'registration_number',
+        'fiscal_year_start_month',
+        'fiscal_year_start_day',
     ];
 
     public static function getSettings()
@@ -34,6 +37,9 @@ class GeneralSetting extends Model
                     'default_timezone' => 'Asia/Manila',
                     'default_date_format' => 'Y-m-d',
                     'default_currency' => 'PHP',
+                    'registration_number' => null,
+                    'fiscal_year_start_month' => null,
+                    'fiscal_year_start_day' => null,
                 ]);
             }
 
@@ -49,6 +55,9 @@ class GeneralSetting extends Model
                 'default_timezone' => 'Asia/Manila',
                 'default_date_format' => 'Y-m-d',
                 'default_currency' => 'PHP',
+                'registration_number' => null,
+                'fiscal_year_start_month' => null,
+                'fiscal_year_start_day' => null,
             ]);
         }
     }
@@ -62,4 +71,3 @@ class GeneralSetting extends Model
         return null;
     }
 }
-

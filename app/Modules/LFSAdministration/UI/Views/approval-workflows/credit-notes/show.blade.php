@@ -10,9 +10,9 @@
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
             @php
                 $reference = '—';
-                if ($adjustment instanceof \\App\\Modules\\AccountsReceivable\\Infrastructure\\Models\\ArInvoiceAdjustment) {
+                if ($adjustment instanceof \App\Modules\AccountsReceivable\Infrastructure\Models\ArInvoiceAdjustment) {
                     $reference = $adjustment->invoice?->invoice_number ? $adjustment->invoice->invoice_number . ' (AR)' : '—';
-                } elseif ($adjustment instanceof \\App\\Modules\\AccountsPayable\\Infrastructure\\Models\\ApBillAdjustment) {
+                } elseif ($adjustment instanceof \App\Modules\AccountsPayable\Infrastructure\Models\ApBillAdjustment) {
                     $reference = $adjustment->bill?->bill_number ? $adjustment->bill->bill_number . ' (AP)' : '—';
                 }
             @endphp
